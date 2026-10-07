@@ -8,7 +8,11 @@ SHELL := /bin/bash
 
 ## install: pnpm install（有 lockfile 时 --frozen-lockfile）
 install:
-	@if [ -f pnpm-lock.yaml ]; then pnpm install --frozen-lockfile; else pnpm install; fi
+ifeq ($(wildcard pnpm-lock.yaml),)
+	pnpm install
+else
+	pnpm install --frozen-lockfile
+endif
 
 ## lint: oxlint（CI 同款）
 lint:
