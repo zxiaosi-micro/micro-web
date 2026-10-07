@@ -1,0 +1,56 @@
+// App.tsx · 极简 hash 路由（S3-04 范围：登录 + 布局 + 五页；多路由框架 S4 演进）。
+
+import { useEffect, useState } from "react";
+import { Spin } from "antd";
+import { cachedMe, fetchMe } from "@micro/shared";
+import LoginPage from "./pages/Login";
+import AppLayout from "./layouts/AppLayout";
+import UsersPage from "./pages/Users";
+import RolesPage from "./pages/Roles";
+import OrgsPage from "./pages/Orgs";
+import SessionsPage from "./pages/Sessions";
+import TenantsPage from "./pages/Tenants";
+
+function currentRoute(): string {
+  return window.location.hash.replace(/^#\/?/, "") || "users";
+}
+
+export default function App() {
+  const [route, setRoute] = useState(currentRoute());
+  const [me, setMe] = useState<ReturnType<typeof cachedMe>>(cachedMe());
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    const onHash = () => setRoute(currentRoute());
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+
+  useEffect(() => {
+    // 启动期会话探测：有 token 则拉 /auth/me 预热
+    void fetchMe().then((m) => {
+      setMe(m);
+      setChecking(false);
+    });
+  }, []);
+
+  if (checking) {
+    return <Spin style={{ display: "grid", placeItems: "center", height: "100vh" }} />;
+  }
+  if (!me) {
+    return <LoginPage onLoggedIn={() => setMe(cachedMe())} />;
+  }
+
+  const page =
+    route === "roles" ? <RolesPage /> :
+    route === "orgs" ? <OrgsPage /> :
+    route === "sessions" ? <SessionsPage /> :
+    route === "tenants" ? <TenantsPage /> :
+    <UsersPage />;
+
+  return (
+    <AppLayout me={me} route={route} onNavigate={(r) => (window.location.hash = `/${r}`)} onLoggedOut={() => setMe(null)}>
+      {page}
+    </AppLayout>
+  );
+}

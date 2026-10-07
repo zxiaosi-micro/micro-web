@@ -1,0 +1,10 @@
+{
+  "name": "micro-web",
+  "private": true,
+  "scripts": {
+    "lint": "echo lint at package level"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
