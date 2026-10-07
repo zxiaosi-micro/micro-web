@@ -54,6 +54,9 @@ importers:
       '@types/react':
         specifier: ^19.2.6
         version: 19.3.0
+      oxlint:
+        specifier: ^1.24.0
+        version: 1.87.0
       react:
         specifier: ^19.2.0
         version: 19.3.0
