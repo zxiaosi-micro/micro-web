@@ -12,7 +12,6 @@ jobs:
   web:
     name: pnpm install → oxlint → tsc → build
     runs-on: ubuntu-latest
-    if: ${{ hashFiles('**/package.json') != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
