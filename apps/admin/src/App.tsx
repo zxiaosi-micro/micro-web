@@ -10,6 +10,12 @@ import RolesPage from "./pages/Roles";
 import OrgsPage from "./pages/Orgs";
 import SessionsPage from "./pages/Sessions";
 import TenantsPage from "./pages/Tenants";
+import PartiesPage from "./pages/Parties";
+import OpportunitiesPage from "./pages/Opportunities";
+import ProductsPage from "./pages/Products";
+import InventoryPage from "./pages/Inventory";
+import MessagesPage from "./pages/Messages";
+import AuditsPage from "./pages/Audits";
 
 function currentRoute(): string {
   return window.location.hash.replace(/^#\/?/, "") || "users";
@@ -41,11 +47,21 @@ export default function App() {
     return <LoginPage onLoggedIn={() => setMe(cachedMe())} />;
   }
 
+  // S4 业务页面：products 与 station-products 共用商品中心（Tab 默认位不同）；
+  // logs 与 cmd-logs 共用审计中心（同上）。
   const page =
     route === "roles" ? <RolesPage /> :
     route === "orgs" ? <OrgsPage /> :
     route === "sessions" ? <SessionsPage /> :
     route === "tenants" ? <TenantsPage /> :
+    route === "parties" ? <PartiesPage /> :
+    route === "opportunities" ? <OpportunitiesPage /> :
+    route === "products" ? <ProductsPage /> :
+    route === "station-products" ? <ProductsPage defaultTab="station" /> :
+    route === "stocks" ? <InventoryPage /> :
+    route === "inbox" ? <MessagesPage /> :
+    route === "logs" ? <AuditsPage /> :
+    route === "cmd-logs" ? <AuditsPage defaultTab="cmd" /> :
     <UsersPage />;
 
   return (
