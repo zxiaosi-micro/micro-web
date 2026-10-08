@@ -16,6 +16,9 @@ import ProductsPage from "./pages/Products";
 import InventoryPage from "./pages/Inventory";
 import MessagesPage from "./pages/Messages";
 import AuditsPage from "./pages/Audits";
+import OrdersPage from "./pages/Orders";
+import PaymentsPage from "./pages/Payments";
+import ContractsPage from "./pages/Contracts";
 
 function currentRoute(): string {
   return window.location.hash.replace(/^#\/?/, "") || "users";
@@ -62,6 +65,18 @@ export default function App() {
     route === "inbox" ? <MessagesPage /> :
     route === "logs" ? <AuditsPage /> :
     route === "cmd-logs" ? <AuditsPage defaultTab="cmd" /> :
+    // S5 交易域（路由末段来自 AppLayout.routeOf：/trade/orders → orders）
+    route === "orders" ? <OrdersPage /> :
+    route === "returns" ? <OrdersPage defaultTab="returns" /> :
+    route === "payments" ? <PaymentsPage /> :
+    route === "refunds" ? <PaymentsPage defaultTab="refunds" /> :
+    route === "invoices" ? <PaymentsPage defaultTab="invoices" /> :
+    route === "reconcile-tasks" ? <PaymentsPage defaultTab="reconcile" /> :
+    route === "contracts" ? <ContractsPage /> :
+    route === "warranties" ? <ContractsPage defaultTab="warranties" /> :
+    route === "sla" ? <ContractsPage defaultTab="sla" /> :
+    route === "claims" ? <ContractsPage defaultTab="claims" /> :
+    route === "extensions" ? <ContractsPage defaultTab="extensions" /> :
     <UsersPage />;
 
   return (

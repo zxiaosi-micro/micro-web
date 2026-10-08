@@ -36,6 +36,56 @@ export interface BomItem {
 	qty: number;
 }
 
+export interface ClaimApproveReq {
+	claim_no: string;
+	approve: boolean;
+	remark?: string;
+}
+
+export interface ClaimCreateReq {
+	warranty_id: string;
+	type: string;
+	description?: string;
+}
+
+export interface ClaimCreateResp {
+	claim_id: string;
+	claim_no: string;
+}
+
+export interface ClaimListReq {
+	status?: string;
+	page?: number;
+	size?: number;
+}
+
+export interface ClaimListResp {
+	list: ClaimView[];
+	total: number;
+}
+
+export interface ClaimNoPath {
+	claim_no: string;
+}
+
+export interface ClaimSettleReq {
+	claim_no: string;
+	settle_type: string;
+	amount?: string;
+}
+
+export interface ClaimView {
+	claim_no: string;
+	warranty_id: string;
+	warranty_no: string;
+	type: string;
+	description: string;
+	status: string;
+	settle_type: string;
+	amount: string;
+	created_at: number;
+}
+
 export interface CmdAuditItem {
 	cmd_audit_id: string;
 	cmd_id: string;
@@ -85,6 +135,72 @@ export interface ContactListResp {
 	list: ContactItem[];
 }
 
+export interface ContractArchiveReq {
+	contract_no: string;
+	action: string;
+	remark?: string;
+}
+
+export interface ContractFileUploadReq {
+	contract_no: string;
+	file_id: string;
+	file_name: string;
+	sign_party_name?: string;
+	sign_party_type?: string;
+	remark?: string;
+}
+
+export interface ContractFileUploadResp {
+	version: number;
+}
+
+export interface ContractFileView {
+	file_rec_id: string;
+	file_id: string;
+	file_name: string;
+	version: number;
+	sign_party_name: string;
+	sign_party_type: string;
+	status: string;
+	uploaded_by: string;
+	uploader_name: string;
+	uploaded_at: number;
+	remark: string;
+}
+
+export interface ContractListReq {
+	keyword?: string;
+	type?: string;
+	status?: string;
+	page?: number;
+	size?: number;
+}
+
+export interface ContractListResp {
+	list: ContractView[];
+	total: number;
+}
+
+export interface ContractNoPath {
+	contract_no: string;
+}
+
+export interface ContractView {
+	contract_id: string;
+	contract_no: string;
+	type: string;
+	status: string;
+	name: string;
+	template_id: string;
+	amount: string;
+	files: ContractFileView[];
+	effective_at: number;
+	archived_at: number;
+	remark: string;
+	created_at: number;
+	created_by: string;
+}
+
 export interface CrmRecordCreateReq {
 	id: string;
 	content: string;
@@ -123,6 +239,34 @@ export interface DealerExtUpsertReq {
 	rebate_rule?: string;
 }
 
+export interface ExtensionNoPath {
+	extension_no: string;
+}
+
+export interface ExtensionRefundReq {
+	extension_no: string;
+	reason?: string;
+}
+
+export interface ExtensionSellReq {
+	base_warranty_id: string;
+	months: number;
+	order_no?: string;
+	amount?: string;
+}
+
+export interface ExtensionSellResp {
+	extension_id: string;
+	extension_no: string;
+}
+
+export interface ExtensionTransferReq {
+	extension_no: string;
+	to_target_type: string;
+	to_target_id?: string;
+	to_target_key?: string;
+}
+
 export interface IDPath {
 	id: string;
 }
@@ -150,6 +294,51 @@ export interface InventoryListReq {
 export interface InventoryListResp {
 	list: InventoryItem[];
 	total: number;
+}
+
+export interface InvoiceCreateReq {
+	payment_no: string;
+	title: string;
+	tax_no?: string;
+	amount?: string;
+}
+
+export interface InvoiceCreateResp {
+	invoice_no: string;
+}
+
+export interface InvoiceListReq {
+	keyword?: string;
+	status?: string;
+	page?: number;
+	size?: number;
+}
+
+export interface InvoiceListResp {
+	list: InvoiceView[];
+	total: number;
+}
+
+export interface InvoiceNoPath {
+	invoice_no: string;
+}
+
+export interface InvoiceReverseReq {
+	invoice_no: string;
+	reason?: string;
+}
+
+export interface InvoiceView {
+	invoice_no: string;
+	payment_no: string;
+	order_no: string;
+	title: string;
+	tax_no: string;
+	amount: string;
+	status: string;
+	reverse_reason: string;
+	issued_at: number;
+	created_at: number;
 }
 
 export interface LoginReq {
@@ -300,6 +489,90 @@ export interface OpportunityStageReq {
 	stage: string;
 }
 
+export interface OrderCancelReq {
+	order_no: string;
+	reason?: string;
+}
+
+export interface OrderCreateReq {
+	type: string;
+	buyer_party_id?: string;
+	remark?: string;
+	items: OrderItemInputApi[];
+	pay_timeout_minutes?: number;
+}
+
+export interface OrderCreateResp {
+	order_id: string;
+	order_no: string;
+	total_amount: string;
+	pay_expire_at: number;
+	saga_id: string;
+}
+
+export interface OrderItemInputApi {
+	sku_id: string;
+	warehouse_id: string;
+	qty: number;
+	sn?: string;
+}
+
+export interface OrderItemView {
+	item_id: string;
+	sku_id: string;
+	sku_name: string;
+	sn: string;
+	warehouse_id: string;
+	qty: number;
+	unit_price: string;
+	amount: string;
+	out_qty: number;
+}
+
+export interface OrderListReq {
+	keyword?: string;
+	type?: string;
+	status?: string;
+	page?: number;
+	size?: number;
+}
+
+export interface OrderListResp {
+	list: OrderView[];
+	total: number;
+}
+
+export interface OrderNoPath {
+	order_no: string;
+}
+
+export interface OrderPayReq {
+	order_no: string;
+	channel: string;
+}
+
+export interface OrderPayResp {
+	payment_no: string;
+	status: string;
+	pay_params: string;
+}
+
+export interface OrderView {
+	order_id: string;
+	order_no: string;
+	type: string;
+	status: string;
+	buyer_party_id: string;
+	total_amount: string;
+	pay_expire_at: number;
+	paid_at: number;
+	cancel_reason: string;
+	remark: string;
+	items: OrderItemView[];
+	created_at: number;
+	created_by: string;
+}
+
 export interface OrgCreateReq {
 	parent_id?: string;
 	name: string;
@@ -374,6 +647,57 @@ export interface PartyUpdateReq {
 	remark?: string;
 }
 
+export interface PaymentApproveReq {
+	payment_no: string;
+	approve: boolean;
+	remark?: string;
+}
+
+export interface PaymentConfirmReq {
+	payment_no: string;
+	channel_txn_id?: string;
+	paid_amount?: string;
+	source?: string;
+}
+
+export interface PaymentListReq {
+	keyword?: string;
+	channel?: string;
+	status?: string;
+	page?: number;
+	size?: number;
+}
+
+export interface PaymentListResp {
+	list: PaymentView[];
+	total: number;
+}
+
+export interface PaymentNoPath {
+	payment_no: string;
+}
+
+export interface PaymentSettleReq {
+	payment_no: string;
+	remark?: string;
+}
+
+export interface PaymentView {
+	payment_no: string;
+	order_no: string;
+	channel: string;
+	status: string;
+	amount: string;
+	paid_amount: string;
+	channel_txn_id: string;
+	payer_party_id: string;
+	created_by: string;
+	approved_by: string;
+	remark: string;
+	paid_at: number;
+	created_at: number;
+}
+
 export interface PriceItem {
 	price_id: string;
 	sku_id: string;
@@ -432,12 +756,107 @@ export interface ProductListResp {
 	total: number;
 }
 
+export interface ReconcileListReq {
+	status?: string;
+	page?: number;
+	size?: number;
+}
+
+export interface ReconcileListResp {
+	list: ReconcileTaskView[];
+	total: number;
+}
+
+export interface ReconcileResolveReq {
+	id: number;
+	resolution: string;
+	remark?: string;
+}
+
+export interface ReconcileTaskView {
+	task_id: string;
+	task_no: string;
+	type: string;
+	biz_date: string;
+	diff_report: string;
+	status: string;
+	resolution: string;
+	resolve_remark: string;
+	resolved_by: string;
+	created_at: number;
+}
+
 export interface RefreshReq {
 	refresh_token: string;
 }
 
 export interface RefreshResp {
 	tokens: TokenPair;
+}
+
+export interface RefundCreateReq {
+	payment_no: string;
+	amount: string;
+	return_no?: string;
+	reason?: string;
+}
+
+export interface RefundCreateResp {
+	refund_no: string;
+	status: string;
+}
+
+export interface RefundListReq {
+	keyword?: string;
+	status?: string;
+	page?: number;
+	size?: number;
+}
+
+export interface RefundListResp {
+	list: RefundView[];
+	total: number;
+}
+
+export interface RefundView {
+	refund_no: string;
+	payment_no: string;
+	order_no: string;
+	return_no: string;
+	amount: string;
+	channel: string;
+	status: string;
+	channel_refund_id: string;
+	reason: string;
+	created_at: number;
+}
+
+export interface ReturnApproveReq {
+	return_no: string;
+	approve: boolean;
+	remark?: string;
+}
+
+export interface ReturnCreateReq {
+	order_no: string;
+	items: ReturnItemInputApi[];
+	reason?: string;
+}
+
+export interface ReturnCreateResp {
+	return_id: string;
+	return_no: string;
+}
+
+export interface ReturnItemInputApi {
+	sku_id: string;
+	qty: number;
+	sn?: string;
+	reason?: string;
+}
+
+export interface ReturnNoPath {
+	return_no: string;
 }
 
 export interface RoleCreateReq {
@@ -481,6 +900,45 @@ export interface RoleUpdateReq {
 	menu_ids?: string[];
 }
 
+export interface SagaResp {
+	saga: SagaView;
+}
+
+export interface SagaRetryReq {
+	id: number;
+	remark?: string;
+}
+
+export interface SagaStepView {
+	step: number;
+	name: string;
+	status: string;
+	idem_key: string;
+}
+
+export interface SagaView {
+	saga_id: string;
+	order_no: string;
+	order_type: string;
+	current_step: number;
+	status: string;
+	retry_count: number;
+	next_retry_at: number;
+	last_error: string;
+	steps: SagaStepView[];
+	updated_at: number;
+}
+
+export interface SalesSumReq {
+	from?: number;
+	to?: number;
+}
+
+export interface SalesSumResp {
+	total_amount: string;
+	order_count: number;
+}
+
 export interface SessionItem {
 	sid: string;
 	client: string;
@@ -504,6 +962,34 @@ export interface SessionListReq {
 
 export interface SessionListResp {
 	list: SessionItem[];
+}
+
+export interface ShipmentCreateReq {
+	order_no: string;
+	warehouse_id: string;
+	items: ShipmentItemInputApi[];
+	carrier?: string;
+	tracking_no?: string;
+}
+
+export interface ShipmentCreateResp {
+	shipment_id: string;
+	shipment_no: string;
+}
+
+export interface ShipmentItemInputApi {
+	sku_id: string;
+	qty: number;
+	sn?: string;
+}
+
+export interface ShipmentNoPath {
+	shipment_no: string;
+}
+
+export interface ShipmentSignReq {
+	shipment_no: string;
+	signed_by: string;
 }
 
 export interface SimpleResp {
@@ -539,6 +1025,37 @@ export interface SkuListReq {
 export interface SkuListResp {
 	list: SkuItem[];
 	total: number;
+}
+
+export interface SlaBindReq {
+	contract_no: string;
+	strategy_id: string;
+}
+
+export interface SlaCreateReq {
+	code: string;
+	name: string;
+	level: string;
+	response_minutes: number;
+	resolve_minutes: number;
+}
+
+export interface SlaCreateResp {
+	strategy_id: string;
+}
+
+export interface SlaListResp {
+	list: SlaStrategyView[];
+}
+
+export interface SlaStrategyView {
+	strategy_id: string;
+	code: string;
+	name: string;
+	level: string;
+	response_minutes: number;
+	resolve_minutes: number;
+	created_at: number;
 }
 
 export interface StaffCreateReq {
@@ -776,6 +1293,13 @@ export interface TokenPair {
 	refresh_expires_in: number;
 }
 
+export interface TraceAddReq {
+	shipment_no: string;
+	node: string;
+	description?: string;
+	trace_time?: number;
+}
+
 export interface UnreadCountResp {
 	count: number;
 }
@@ -862,6 +1386,18 @@ export interface WarehouseListResp {
 	total: number;
 }
 
+export interface WarrantyListReq {
+	status?: string;
+	level?: string;
+	page?: number;
+	size?: number;
+}
+
+export interface WarrantyListResp {
+	list: WarrantyView[];
+	total: number;
+}
+
 export interface WarrantyPolicyItem {
 	sku_id: string;
 	period_months: number;
@@ -872,5 +1408,31 @@ export interface WarrantyPolicyUpsertReq {
 	id: string;
 	period_months: number;
 	start_rule: string;
+}
+
+export interface WarrantyTargetReq {
+	target_type: string;
+	target_id?: string;
+	sn?: string;
+}
+
+export interface WarrantyTargetResp {
+	list: WarrantyView[];
+}
+
+export interface WarrantyView {
+	warranty_no: string;
+	level: string;
+	target_type: string;
+	target_id: string;
+	target_key: string;
+	status: string;
+	start_at: number;
+	end_at: number;
+	months: number;
+	start_rule: string;
+	source_type: string;
+	source_no: string;
+	created_at: number;
 }
 
