@@ -111,6 +111,45 @@ export interface CmdAuditListResp {
 	total: number;
 }
 
+export interface CmdListReq {
+	device_id?: string;
+	sn?: string;
+	status?: string;
+	page?: number;
+	size?: number;
+}
+
+export interface CmdListResp {
+	list: CmdView[];
+	total: number;
+}
+
+export interface CmdSendReq {
+	device_id?: string;
+	sn?: string;
+	cmd_type: string;
+	params_json?: string;
+	client_cmd_id?: string;
+}
+
+export interface CmdSendResp {
+	cmd_id: string;
+}
+
+export interface CmdView {
+	cmd_id: string;
+	device_id: string;
+	sn: string;
+	cmd_type: string;
+	params_json: string;
+	status: string;
+	retry_count: number;
+	acked_at: number;
+	fail_reason: string;
+	operator: string;
+	created_at: number;
+}
+
 export interface ContactCreateReq {
 	id: string;
 	name: string;
@@ -239,6 +278,127 @@ export interface DealerExtUpsertReq {
 	rebate_rule?: string;
 }
 
+export interface DeviceActivateReq {
+	device_id: string;
+	party_id?: string;
+}
+
+export interface DeviceGetResp {
+	device: DeviceView;
+}
+
+export interface DeviceImportItem {
+	sn: string;
+	product_key: string;
+	model?: string;
+	batch_no?: string;
+}
+
+export interface DeviceImportReq {
+	items: DeviceImportItem[];
+	provision?: boolean;
+}
+
+export interface DeviceImportResp {
+	imported: number;
+	secrets: DeviceSecretRow[];
+	provision_errors: string[];
+}
+
+export interface DeviceListReq {
+	keyword?: string;
+	status?: string;
+	product_key?: string;
+	page?: number;
+	size?: number;
+}
+
+export interface DeviceListResp {
+	list: DeviceView[];
+	total: number;
+}
+
+export interface DeviceNoPath {
+	device_id: string;
+}
+
+export interface DeviceProvisionResp {
+	sn: string;
+	secret: string;
+}
+
+export interface DeviceSecretRow {
+	sn: string;
+	secret: string;
+}
+
+export interface DeviceShadowMetric {
+	key: string;
+	value: number;
+}
+
+export interface DeviceShadowResp {
+	sn: string;
+	ts: number;
+	metrics: DeviceShadowMetric[];
+	raw: string;
+}
+
+export interface DeviceStationResp {
+	station_id: string;
+	station_no: string;
+	station_name: string;
+	role: string;
+}
+
+export interface DeviceTopologyNode {
+	node_id: string;
+	parent_id: string;
+	node_type: string;
+	node_name: string;
+	sort: number;
+}
+
+export interface DeviceTopologyResp {
+	nodes: DeviceTopologyNode[];
+}
+
+export interface DeviceTopologySaveNode {
+	parent_ref: number;
+	node_type: string;
+	node_name?: string;
+	sort?: number;
+}
+
+export interface DeviceTopologySaveReq {
+	device_id: string;
+	nodes: DeviceTopologySaveNode[];
+}
+
+export interface DeviceTopologySaveResp {
+	saved: number;
+}
+
+export interface DeviceTransitionReq {
+	device_id: string;
+	to_status: string;
+	reason?: string;
+}
+
+export interface DeviceView {
+	device_id: string;
+	sn: string;
+	product_key: string;
+	model: string;
+	batch_no: string;
+	status: string;
+	party_id: string;
+	order_no: string;
+	activated_at: number;
+	has_secret: boolean;
+	created_at: number;
+}
+
 export interface ExtensionNoPath {
 	extension_no: string;
 }
@@ -265,6 +425,43 @@ export interface ExtensionTransferReq {
 	to_target_type: string;
 	to_target_id?: string;
 	to_target_key?: string;
+}
+
+export interface FirmwareListReq {
+	product_key?: string;
+	page?: number;
+	size?: number;
+}
+
+export interface FirmwareListResp {
+	list: FirmwareView[];
+	total: number;
+}
+
+export interface FirmwareSaveReq {
+	product_key: string;
+	version: string;
+	file_url: string;
+	file_size?: number;
+	sha256: string;
+	signature: string;
+	remark?: string;
+}
+
+export interface FirmwareSaveResp {
+	firmware_id: string;
+}
+
+export interface FirmwareView {
+	firmware_id: string;
+	product_key: string;
+	version: string;
+	file_url: string;
+	file_size: number;
+	sha256: string;
+	sign_alg: string;
+	remark: string;
+	created_at: number;
 }
 
 export interface IDPath {
@@ -595,6 +792,74 @@ export interface OrgUpdateReq {
 	parent_id?: string;
 	name?: string;
 	sort?: number;
+}
+
+export interface OtaDeviceView {
+	id: string;
+	device_id: string;
+	sn: string;
+	status: string;
+	cmd_id: string;
+	retry_count: number;
+	error: string;
+	dispatched_at: number;
+	finished_at: number;
+}
+
+export interface OtaTaskCreateReq {
+	name: string;
+	product_key: string;
+	firmware_id: string;
+	rollback_firmware_id?: string;
+	batch_size?: number;
+	device_ids: string[];
+}
+
+export interface OtaTaskCreateResp {
+	task_id: string;
+}
+
+export interface OtaTaskListReq {
+	status?: string;
+	product_key?: string;
+	page?: number;
+	size?: number;
+}
+
+export interface OtaTaskListResp {
+	list: OtaTaskView[];
+	total: number;
+}
+
+export interface OtaTaskNoPath {
+	task_id: string;
+}
+
+export interface OtaTaskRollbackReq {
+	task_id: string;
+	reason?: string;
+}
+
+export interface OtaTaskRollbackResp {
+	rolled_back: number;
+}
+
+export interface OtaTaskView {
+	task_id: string;
+	task_no: string;
+	name: string;
+	product_key: string;
+	firmware_id: string;
+	rollback_firmware_id: string;
+	batch_size: number;
+	fail_threshold_pct: number;
+	status: string;
+	total: number;
+	success_count: number;
+	fail_count: number;
+	fail_reason: string;
+	created_at: number;
+	devices: OtaDeviceView[];
 }
 
 export interface PartyCreateReq {
@@ -1084,6 +1349,96 @@ export interface StaffListResp {
 	total: number;
 }
 
+export interface StationBindItem {
+	device_id?: string;
+	sn?: string;
+	role?: string;
+}
+
+export interface StationBindReq {
+	station_id: string;
+	devices: StationBindItem[];
+	bound_by?: string;
+}
+
+export interface StationBindResp {
+	bound: number;
+}
+
+export interface StationCreateReq {
+	order_no?: string;
+	station_no?: string;
+	name: string;
+	type: string;
+	province?: string;
+	city?: string;
+	address?: string;
+	longitude?: number;
+	latitude?: number;
+	capacity_kwh?: number;
+	power_kw?: number;
+	grid_status?: string;
+	devices?: StationBindItem[];
+}
+
+export interface StationCreateResp {
+	station_id: string;
+}
+
+export interface StationDeviceListResp {
+	list: StationDeviceView[];
+}
+
+export interface StationDeviceView {
+	id: string;
+	station_id: string;
+	device_id: string;
+	sn: string;
+	role: string;
+	bound_at: number;
+}
+
+export interface StationGetResp {
+	station: StationView;
+}
+
+export interface StationListReq {
+	keyword?: string;
+	status?: string;
+	type?: string;
+	page?: number;
+	size?: number;
+}
+
+export interface StationListResp {
+	list: StationView[];
+	total: number;
+}
+
+export interface StationMonitorItem {
+	device_id: string;
+	sn: string;
+	online: boolean;
+	soc: number;
+	power: number;
+	voltage: number;
+	temperature: number;
+	ts: number;
+}
+
+export interface StationMonitorResp {
+	station_id: string;
+	device_count: number;
+	online_count: number;
+	avg_soc: number;
+	total_power: number;
+	items: StationMonitorItem[];
+}
+
+export interface StationNoPath {
+	station_id: string;
+}
+
 export interface StationProductCreateReq {
 	name: string;
 	remark?: string;
@@ -1111,6 +1466,70 @@ export interface StationProductListReq {
 export interface StationProductListResp {
 	list: StationProductItem[];
 	total: number;
+}
+
+export interface StationStaffAddReq {
+	station_id: string;
+	user_id: string;
+	staff_type: string;
+	shift?: string;
+}
+
+export interface StationStaffListResp {
+	list: StationStaffView[];
+}
+
+export interface StationStaffRemoveReq {
+	station_id: string;
+	user_id: string;
+}
+
+export interface StationStaffView {
+	id: string;
+	station_id: string;
+	user_id: string;
+	staff_type: string;
+	shift: string;
+	created_at: number;
+}
+
+export interface StationTopologyResp {
+	topology: StationTopologyView;
+}
+
+export interface StationTopologySaveReq {
+	station_id: string;
+	nodes_json: string;
+	edges_json: string;
+}
+
+export interface StationTopologySaveResp {
+	version: number;
+}
+
+export interface StationTopologyView {
+	version: number;
+	nodes_json: string;
+	edges_json: string;
+	updated_at: number;
+}
+
+export interface StationView {
+	station_id: string;
+	station_no: string;
+	name: string;
+	type: string;
+	status: string;
+	province: string;
+	city: string;
+	address: string;
+	longitude: number;
+	latitude: number;
+	capacity_kwh: number;
+	power_kw: number;
+	grid_status: string;
+	order_no: string;
+	created_at: number;
 }
 
 export interface StepUpReq {

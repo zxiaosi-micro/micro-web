@@ -17,6 +17,8 @@ import InventoryPage from "./pages/Inventory";
 import MessagesPage from "./pages/Messages";
 import AuditsPage from "./pages/Audits";
 import OrdersPage from "./pages/Orders";
+import DevicesPage from "./pages/Devices";
+import StationsPage from "./pages/Stations";
 import PaymentsPage from "./pages/Payments";
 import ContractsPage from "./pages/Contracts";
 
@@ -77,6 +79,10 @@ export default function App() {
     route === "sla" ? <ContractsPage defaultTab="sla" /> :
     route === "claims" ? <ContractsPage defaultTab="claims" /> :
     route === "extensions" ? <ContractsPage defaultTab="extensions" /> :
+    route === "devices" ? <DevicesPage /> :
+    route === "ota-tasks" ? <DevicesPage defaultTab="ota" /> :
+    route === "commands" ? <DevicesPage defaultTab="cmds" /> :
+    route === "stations" ? <StationsPage /> :
     <UsersPage />;
 
   return (
