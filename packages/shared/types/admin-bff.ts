@@ -547,6 +547,54 @@ export interface DeviceView {
 	created_at: number;
 }
 
+export interface ExportCreateReq {
+	report_type: string;
+	format: string;
+	date_start: string;
+	date_end: string;
+}
+
+export interface ExportCreateResp {
+	export_id: string;
+}
+
+export interface ExportDownloadReq {
+	id: string;
+}
+
+export interface ExportDownloadResp {
+	file_id: string;
+	file_name: string;
+	content_type: string;
+	data: string;
+}
+
+export interface ExportItem {
+	export_id: string;
+	report_type: string;
+	format: string;
+	date_start: string;
+	date_end: string;
+	status: string;
+	file_id: string;
+	file_name: string;
+	row_count: number;
+	cost_ms: number;
+	error: string;
+	created_at: number;
+}
+
+export interface ExportListReq {
+	status?: string;
+	page?: number;
+	size?: number;
+}
+
+export interface ExportListResp {
+	list: ExportItem[];
+	total: number;
+}
+
 export interface ExtensionNoPath {
 	extension_no: string;
 }
@@ -892,6 +940,26 @@ export interface MessageListReq {
 
 export interface MessageListResp {
 	list: MessageItem[];
+	total: number;
+}
+
+export interface MetricDictItem {
+	metric_code: string;
+	name: string;
+	report_type: string;
+	unit: string;
+	caliber: string;
+	source_event: string;
+	recon: boolean;
+	sort: number;
+}
+
+export interface MetricDictReq {
+	report_type?: string;
+}
+
+export interface MetricDictResp {
+	list: MetricDictItem[];
 	total: number;
 }
 
@@ -1291,6 +1359,18 @@ export interface ProductListResp {
 	total: number;
 }
 
+export interface RebuildResp {
+	rebuild_version: string;
+}
+
+export interface ReconReq {
+	recon_date?: string;
+}
+
+export interface ReconResp {
+	diff_total: number;
+}
+
 export interface ReconcileListReq {
 	status?: string;
 	page?: number;
@@ -1364,6 +1444,42 @@ export interface RefundView {
 	channel_refund_id: string;
 	reason: string;
 	created_at: number;
+}
+
+export interface ReportOverviewItem {
+	report_type: string;
+	name: string;
+	metrics: Record<string, string>;
+}
+
+export interface ReportOverviewReq {
+	date?: string;
+}
+
+export interface ReportOverviewResp {
+	items: ReportOverviewItem[];
+}
+
+export interface ReportQueryReq {
+	type: string;
+	date_start?: string;
+	date_end?: string;
+	station_id?: string;
+	warehouse_id?: string;
+	channel?: string;
+}
+
+export interface ReportResp {
+	rows: ReportRow[];
+	total: number;
+}
+
+export interface ReportRow {
+	stat_date: string;
+	station_id?: string;
+	warehouse_id?: string;
+	channel?: string;
+	metrics: Record<string, string>;
 }
 
 export interface ReturnApproveReq {

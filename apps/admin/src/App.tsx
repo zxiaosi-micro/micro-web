@@ -21,6 +21,8 @@ import DevicesPage from "./pages/Devices";
 import StationsPage from "./pages/Stations";
 import PaymentsPage from "./pages/Payments";
 import ContractsPage from "./pages/Contracts";
+import ReportsPage from "./pages/Reports";
+import DownloadCenterPage from "./pages/DownloadCenter";
 
 function currentRoute(): string {
   return window.location.hash.replace(/^#\/?/, "") || "users";
@@ -83,6 +85,9 @@ export default function App() {
     route === "ota-tasks" ? <DevicesPage defaultTab="ota" /> :
     route === "commands" ? <DevicesPage defaultTab="cmds" /> :
     route === "stations" ? <StationsPage /> :
+    // S8 分析域（路由末段来自 AppLayout.routeOf：/analytics/reports → reports）
+    route === "reports" ? <ReportsPage /> :
+    route === "download-center" ? <DownloadCenterPage /> :
     <UsersPage />;
 
   return (
