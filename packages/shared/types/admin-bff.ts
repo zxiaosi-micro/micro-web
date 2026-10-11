@@ -178,6 +178,51 @@ export interface AuditLogListResp {
 	total: number;
 }
 
+export interface BIFilterIn {
+	column: string;
+	op: string;
+	values: string[];
+}
+
+export interface BIQueryRow {
+	values: string[];
+}
+
+export interface BIRunReq {
+	table: string;
+	dimensions?: string[];
+	metrics?: string[];
+	filters?: BIFilterIn[];
+	order_by?: string;
+	order_desc?: boolean;
+	page?: number;
+	size?: number;
+}
+
+export interface BIRunResp {
+	columns: string[];
+	rows: BIQueryRow[];
+	total: number;
+}
+
+export interface BIWhitelistColumn {
+	column: string;
+	kind: string;
+	aggs: string;
+	ops: string;
+	comment: string;
+}
+
+export interface BIWhitelistResp {
+	tables: BIWhitelistTable[];
+}
+
+export interface BIWhitelistTable {
+	table: string;
+	comment: string;
+	columns: BIWhitelistColumn[];
+}
+
 export interface BomItem {
 	sku_id: string;
 	sku_name: string;
@@ -545,6 +590,25 @@ export interface DeviceView {
 	activated_at: number;
 	has_secret: boolean;
 	created_at: number;
+}
+
+export interface DwEtlDay {
+	etl_date: string;
+	dim_date_rows: number;
+	dim_tenant_rows: number;
+	dim_party_rows: number;
+	fact_order_rows: number;
+	fact_payment_rows: number;
+	cost_ms: number;
+}
+
+export interface DwEtlRunReq {
+	date_start: string;
+	date_end?: string;
+}
+
+export interface DwEtlRunResp {
+	days: DwEtlDay[];
 }
 
 export interface ExportCreateReq {
@@ -1359,6 +1423,69 @@ export interface ProductListResp {
 	total: number;
 }
 
+export interface RebateConfirmReq {
+	id: string;
+	action: string;
+	remark?: string;
+}
+
+export interface RebateDiffItem {
+	settlement_id: string;
+	party_id: string;
+	stored_amount: string;
+	recomputed_amount?: string;
+}
+
+export interface RebateListReq {
+	period?: string;
+	status?: string;
+	party_id?: string;
+	page?: number;
+	size?: number;
+}
+
+export interface RebateListResp {
+	list: RebateSettlementItem[];
+	total: number;
+}
+
+export interface RebateReconcileReq {
+	period: string;
+}
+
+export interface RebateReconcileResp {
+	diff_count: number;
+	diffs: RebateDiffItem[];
+}
+
+export interface RebateRunReq {
+	period: string;
+	party_id?: string;
+}
+
+export interface RebateRunResp {
+	results: RebateRunResult[];
+}
+
+export interface RebateRunResult {
+	party_id: string;
+	amount: string;
+	base_amount: string;
+	rate: string;
+	payment_count: number;
+}
+
+export interface RebateSettlementItem {
+	settlement_id: string;
+	period: string;
+	party_id: string;
+	amount: string;
+	status: string;
+	rule_snapshot: string;
+	created_at: number;
+	updated_at: number;
+}
+
 export interface RebuildResp {
 	rebuild_version: string;
 }
@@ -1399,6 +1526,47 @@ export interface ReconcileTaskView {
 	resolve_remark: string;
 	resolved_by: string;
 	created_at: number;
+}
+
+export interface RecycleCreateReq {
+	id: string;
+	recycler_party_id?: string;
+	residual_value?: string;
+	evidence_file_id?: string;
+	remark?: string;
+}
+
+export interface RecycleCreateResp {
+	recycle_id: string;
+	recycle_no: string;
+	trace_code: string;
+}
+
+export interface RecycleItem {
+	recycle_id: string;
+	recycle_no: string;
+	assessment_id: string;
+	device_id: string;
+	sn: string;
+	recycler_party_id?: string;
+	residual_value: string;
+	trace_code: string;
+	evidence_file_id?: string;
+	status: string;
+	remark?: string;
+	created_at: number;
+}
+
+export interface RecycleListReq {
+	keyword?: string;
+	status?: string;
+	page?: number;
+	size?: number;
+}
+
+export interface RecycleListResp {
+	list: RecycleItem[];
+	total: number;
 }
 
 export interface RefreshReq {
@@ -1480,6 +1648,86 @@ export interface ReportRow {
 	warehouse_id?: string;
 	channel?: string;
 	metrics: Record<string, string>;
+}
+
+export interface RetirementCreateReq {
+	id: string;
+	inspection_ticket_no?: string;
+	remark?: string;
+}
+
+export interface RetirementCreateResp {
+	assessment_id: string;
+	assessment_no: string;
+	round: number;
+}
+
+export interface RetirementDecideReq {
+	id: string;
+	target?: string;
+	recycler_party_id?: string;
+	residual_value?: string;
+	remark?: string;
+}
+
+export interface RetirementDecideResp {
+	grade: string;
+	disposition: string;
+	recycle_no?: string;
+	trace_code?: string;
+	device_status: string;
+}
+
+export interface RetirementItem {
+	assessment_id: string;
+	assessment_no: string;
+	device_id: string;
+	sn: string;
+	round: number;
+	soh: string;
+	cycle_count: number;
+	resistance_mohm?: string;
+	consistency_ok: boolean;
+	safety_json?: string;
+	grade?: string;
+	disposition: string;
+	inspection_ticket_no?: string;
+	remark?: string;
+	created_at: number;
+}
+
+export interface RetirementListReq {
+	keyword?: string;
+	grade?: string;
+	disposition?: string;
+	page?: number;
+	size?: number;
+}
+
+export interface RetirementListResp {
+	list: RetirementItem[];
+	total: number;
+}
+
+export interface RetirementSafetyItem {
+	item: string;
+	pass: boolean;
+}
+
+export interface RetirementSubmitReq {
+	id: string;
+	soh: string;
+	cycle_count: number;
+	resistance_mohm?: string;
+	consistency_ok: boolean;
+	safety_items?: RetirementSafetyItem[];
+	measured_at?: number;
+	source?: string;
+}
+
+export interface RetirementSubmitResp {
+	grade: string;
+	reason: string;
 }
 
 export interface ReturnApproveReq {

@@ -23,6 +23,9 @@ import PaymentsPage from "./pages/Payments";
 import ContractsPage from "./pages/Contracts";
 import ReportsPage from "./pages/Reports";
 import DownloadCenterPage from "./pages/DownloadCenter";
+import RetirementsPage from "./pages/Retirements";
+import BIQueryPage from "./pages/BIQuery";
+import RebatesPage from "./pages/Rebates";
 import DiagPage from "./pages/Diag";
 
 function currentRoute(): string {
@@ -77,6 +80,8 @@ export default function App() {
     route === "refunds" ? <PaymentsPage defaultTab="refunds" /> :
     route === "invoices" ? <PaymentsPage defaultTab="invoices" /> :
     route === "reconcile-tasks" ? <PaymentsPage defaultTab="reconcile" /> :
+    // S10-03 经销商返利（/finance/rebates → rebates）
+    route === "rebates" ? <RebatesPage /> :
     route === "contracts" ? <ContractsPage /> :
     route === "warranties" ? <ContractsPage defaultTab="warranties" /> :
     route === "sla" ? <ContractsPage defaultTab="sla" /> :
@@ -85,10 +90,14 @@ export default function App() {
     route === "devices" ? <DevicesPage /> :
     route === "ota-tasks" ? <DevicesPage defaultTab="ota" /> :
     route === "commands" ? <DevicesPage defaultTab="cmds" /> :
+    // S10-01 退役评估（梯次利用 + 回收，路由末段来自 AppLayout.routeOf：/asset/retirements → retirements）
+    route === "retirements" ? <RetirementsPage /> :
     route === "stations" ? <StationsPage /> :
     // S8 分析域（路由末段来自 AppLayout.routeOf：/analytics/reports → reports）
     route === "reports" ? <ReportsPage /> :
     route === "download-center" ? <DownloadCenterPage /> :
+    // S10-02 BI 自助（/analytics/bi → bi）
+    route === "bi" ? <BIQueryPage /> :
     // S9 运维 PC 本地诊断（Tauri 探测，浏览器占位拒绝）
     route === "diag" ? <DiagPage /> :
     <UsersPage />;
