@@ -1,0 +1,122 @@
+/* device-detail 页私有样式 */
+
+.dd-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.dd-sn {
+  font-size: 32px;
+  font-weight: 600;
+  color: #1f2329;
+}
+
+.dd-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+}
+
+.dd-key {
+  color: #8a919f;
+  font-size: 26px;
+}
+
+.dd-val {
+  color: #1f2329;
+  font-size: 26px;
+}
+
+.dd-link {
+  color: #1f6feb;
+}
+
+.dd-station {
+  border-top: 1px solid #f0f1f3;
+  margin-top: 6px;
+  padding-top: 16px;
+}
+
+.dd-section {
+  font-size: 28px;
+  font-weight: 600;
+  color: #1f2329;
+}
+
+.dd-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.dd-metric {
+  width: 33%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+}
+
+.dd-metric-val {
+  font-size: 34px;
+  font-weight: 600;
+  color: #1f2329;
+}
+
+.dd-metric-key {
+  font-size: 22px;
+  color: #8a919f;
+  margin-top: 4px;
+}
+
+.dd-ts {
+  display: block;
+  margin-top: 12px;
+  font-size: 22px;
+  color: #8a919f;
+}
+
+.dd-trend {
+  display: flex;
+  align-items: flex-end;
+  height: 160px;
+  margin-top: 16px;
+  gap: 4px;
+}
+
+.dd-bar {
+  flex: 1;
+  background-color: #1f6feb;
+  border-radius: 4px 4px 0 0;
+  min-height: 4px;
+}
+
+.dd-warranty {
+  padding: 16px 0;
+  border-bottom: 1px solid #f0f1f3;
+}
+
+.dd-warranty-no {
+  font-size: 26px;
+  color: #1f2329;
+}
+
+.dd-warranty-range {
+  display: block;
+  margin-top: 8px;
+  font-size: 24px;
+  color: #8a919f;
+}
+
+.dd-btn {
+  margin-top: 16px;
+  width: 100%;
+  font-size: 28px;
+}
+
+.dd-btn-primary {
+  background-color: #1f6feb;
+  color: #ffffff;
+}

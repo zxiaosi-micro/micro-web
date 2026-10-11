@@ -1,0 +1,65 @@
+/* workbench/index.scss · 工作台样式。 */
+.wb-stat-row {
+  display: flex;
+  flex-direction: row;
+}
+
+.wb-stat-card {
+  flex: 1;
+  background-color: #ffffff;
+  border-radius: 12rpx;
+  padding: 24rpx;
+  margin-right: 16rpx;
+}
+
+.wb-stat-card-last {
+  margin-right: 0;
+}
+
+.wb-stat-value-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.wb-stat-value {
+  font-size: 44rpx;
+  font-weight: bold;
+  color: #1f2329;
+}
+
+.wb-stat-label {
+  font-size: 24rpx;
+  color: #86909c;
+  margin-top: 8rpx;
+}
+
+.wb-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+
+.wb-item-title {
+  flex: 1;
+  font-size: 26rpx;
+  color: #1f2329;
+  margin-left: 12rpx;
+}
+
+.wb-nav-row {
+  display: flex;
+  flex-direction: row;
+  margin-top: 8rpx;
+}
+
+.wb-nav-btn {
+  flex: 1;
+  margin-right: 16rpx;
+}
+
+.wb-nav-btn-last {
+  margin-right: 0;
+}

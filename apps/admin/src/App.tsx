@@ -23,6 +23,7 @@ import PaymentsPage from "./pages/Payments";
 import ContractsPage from "./pages/Contracts";
 import ReportsPage from "./pages/Reports";
 import DownloadCenterPage from "./pages/DownloadCenter";
+import DiagPage from "./pages/Diag";
 
 function currentRoute(): string {
   return window.location.hash.replace(/^#\/?/, "") || "users";
@@ -88,6 +89,8 @@ export default function App() {
     // S8 分析域（路由末段来自 AppLayout.routeOf：/analytics/reports → reports）
     route === "reports" ? <ReportsPage /> :
     route === "download-center" ? <DownloadCenterPage /> :
+    // S9 运维 PC 本地诊断（Tauri 探测，浏览器占位拒绝）
+    route === "diag" ? <DiagPage /> :
     <UsersPage />;
 
   return (

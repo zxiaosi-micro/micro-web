@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "paths": {
+      "@micro/shared": ["../../packages/shared/src/index.ts"],
+      "@micro/shared/types": ["../../packages/shared/types/index.ts"]
+    }
+  },
+  "include": ["src/**/*", "../../packages/shared/src/**/*", "../../packages/shared/types/**/*"]
+}

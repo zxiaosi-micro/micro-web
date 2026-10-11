@@ -1,0 +1,57 @@
+/* tickets/index.scss · 工单页样式。 */
+.tk-chips {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  margin-bottom: 20rpx;
+}
+
+.tk-item {
+  background-color: #ffffff;
+  border-radius: 12rpx;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+}
+
+.tk-item-head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.tk-item-no {
+  font-size: 22rpx;
+  color: #86909c;
+}
+
+.tk-item-title {
+  flex: 1;
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #1f2329;
+  margin-left: 12rpx;
+}
+
+.tk-item-meta {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  margin-top: 12rpx;
+}
+
+.tk-actions {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  margin-top: 16rpx;
+}
+
+.tk-actions-btn {
+  margin-left: 16rpx;
+  margin-top: 0;
+  padding: 12rpx 24rpx;
+}
+
+.tk-panel-textarea {
+  margin-top: 24rpx;
+}

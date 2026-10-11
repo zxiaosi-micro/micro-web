@@ -1,0 +1,156 @@
+/* service 分包私有样式 */
+
+.sv-tabs {
+  display: flex;
+  background-color: #ffffff;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.sv-tab {
+  flex: 1;
+  text-align: center;
+  padding: 20px 0;
+  font-size: 28px;
+  color: #8a919f;
+}
+
+.sv-tab-active {
+  color: #1f6feb;
+  font-weight: 600;
+  border-bottom: 4px solid #1f6feb;
+}
+
+.sv-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.sv-title {
+  font-size: 28px;
+  font-weight: 600;
+  color: #1f2329;
+}
+
+.sv-meta {
+  display: block;
+  font-size: 24px;
+  color: #8a919f;
+  margin-top: 6px;
+}
+
+.sv-price {
+  font-size: 34px;
+  font-weight: 600;
+  color: #b42318;
+}
+
+.sv-qty {
+  display: flex;
+  align-items: center;
+  margin-top: 16px;
+}
+
+.sv-qty-btn {
+  width: 56px;
+  height: 56px;
+  text-align: center;
+  line-height: 52px;
+  border: 1px solid #dcdfe3;
+  border-radius: 8px;
+  font-size: 32px;
+  color: #1f2329;
+}
+
+.sv-qty-val {
+  margin: 0 24px;
+  font-size: 30px;
+  min-width: 40px;
+  text-align: center;
+}
+
+.sv-btn {
+  margin-top: 20px;
+  width: 100%;
+  background-color: #1f6feb;
+  color: #ffffff;
+  font-size: 28px;
+}
+
+.sv-btn[disabled] {
+  background-color: #a8c4f2;
+  color: #ffffff;
+}
+
+.sv-textarea {
+  width: 100%;
+  min-height: 160px;
+  padding: 16px;
+  box-sizing: border-box;
+  background-color: #f5f6f8;
+  border-radius: 8px;
+  font-size: 26px;
+}
+
+.sv-input {
+  width: 100%;
+  padding: 16px;
+  box-sizing: border-box;
+  background-color: #f5f6f8;
+  border-radius: 8px;
+  font-size: 26px;
+}
+
+.sv-pick {
+  padding: 16px;
+  background-color: #f5f6f8;
+  border-radius: 8px;
+  font-size: 26px;
+  color: #1f2329;
+  margin-bottom: 16px;
+}
+
+.sv-photo {
+  display: inline-block;
+  padding: 12px 20px;
+  background-color: #f5f6f8;
+  border-radius: 8px;
+  font-size: 24px;
+  color: #1f6feb;
+  margin-right: 12px;
+}
+
+.sv-log {
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f1f3;
+}
+
+.sv-log-action {
+  font-size: 26px;
+  color: #1f2329;
+  font-weight: 500;
+}
+
+.sv-log-note {
+  display: block;
+  font-size: 24px;
+  color: #8a919f;
+  margin-top: 4px;
+}
+
+.sv-sla-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 24px;
+}
+
+.sv-sla-key {
+  color: #8a919f;
+}
+
+.sv-sla-val {
+  color: #1f2329;
+}

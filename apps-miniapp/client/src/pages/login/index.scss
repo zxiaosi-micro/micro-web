@@ -1,0 +1,35 @@
+// login.scss · 登录页私有样式（品牌区 + 提示条 + 提交按钮）。
+
+/* 品牌区 */
+.login-hero {
+  margin-top: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 被踢/失效提示条 */
+.login-notice {
+  background-color: #fff3e8;
+  border-radius: 8px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+}
+
+.login-notice-text {
+  color: #d25f00;
+  font-size: 26px;
+}
+
+/* 提交按钮（覆盖 Button 原生边框） */
+.login-submit {
+  margin-top: 24px;
+  background-color: #1f6feb;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 28px;
+}
+
+.login-submit::after {
+  border: none;
+}

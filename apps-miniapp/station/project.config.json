@@ -1,0 +1,16 @@
+{
+  "miniprogramRoot": "dist/weapp/",
+  "projectname": "station-miniapp",
+  "appid": "touristappid",
+  "setting": {
+    "urlCheck": true,
+    "es6": false,
+    "enhance": false,
+    "postcss": false,
+    "minified": false,
+    "packNpmManually": false,
+    "packNpmRelationList": []
+  },
+  "compileType": "miniprogram",
+  "condition": {}
+}

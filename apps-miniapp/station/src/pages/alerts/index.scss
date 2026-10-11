@@ -1,0 +1,78 @@
+/* alerts/index.scss · 告警页样式。 */
+.al-chips {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  margin-bottom: 20rpx;
+}
+
+.al-item {
+  background-color: #ffffff;
+  border-radius: 12rpx;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+}
+
+.al-item-head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.al-item-title {
+  flex: 1;
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #1f2329;
+  margin-left: 12rpx;
+}
+
+.al-item-meta {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  margin-top: 12rpx;
+}
+
+.al-actions {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  margin-top: 16rpx;
+}
+
+.al-actions-btn {
+  margin-left: 16rpx;
+  margin-top: 0;
+  padding: 12rpx 24rpx;
+}
+
+.al-panel-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #1f2329;
+}
+
+.al-panel-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 24rpx;
+}
+
+.al-panel-btns {
+  display: flex;
+  flex-direction: row;
+  margin-top: 32rpx;
+}
+
+.al-panel-btn {
+  flex: 1;
+  margin-right: 16rpx;
+  margin-top: 0;
+}
+
+.al-panel-btn-last {
+  margin-right: 0;
+}

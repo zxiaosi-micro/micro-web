@@ -1,0 +1,190 @@
+// app.scss · 全局样式（weapp：rpx 单位，750 设计稿；类名风格与 apps-mobile/ops 对齐）。
+
+page {
+  background-color: #f5f6f8;
+}
+
+/* 页面容器 */
+.app-page {
+  padding: 24rpx;
+  background-color: #f5f6f8;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+/* 卡片 */
+.app-card {
+  background-color: #ffffff;
+  border-radius: 12rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+}
+
+/* 主标题/次要文本 */
+.app-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #1f2329;
+}
+
+.app-sub {
+  font-size: 24rpx;
+  color: #86909c;
+  margin-top: 8rpx;
+}
+
+/* 主按钮 / 次按钮 / 危险按钮 */
+.app-btn {
+  background-color: #1f6feb;
+  border-radius: 8rpx;
+  padding: 20rpx 24rpx;
+  margin-top: 20rpx;
+}
+
+.app-btn-text {
+  color: #ffffff;
+  font-size: 28rpx;
+  text-align: center;
+}
+
+.app-btn-plain {
+  background-color: #f2f3f5;
+  border-radius: 8rpx;
+  padding: 20rpx 24rpx;
+  margin-top: 16rpx;
+}
+
+.app-btn-plain-text {
+  color: #1f6feb;
+  font-size: 28rpx;
+  text-align: center;
+}
+
+/* 输入框 */
+.app-input {
+  background-color: #f7f8fa;
+  border-radius: 8rpx;
+  padding: 20rpx;
+  margin-top: 16rpx;
+  font-size: 28rpx;
+}
+
+/* 多行输入 */
+.app-textarea {
+  background-color: #f7f8fa;
+  border-radius: 8rpx;
+  padding: 20rpx;
+  margin-top: 16rpx;
+  font-size: 28rpx;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 行布局 */
+.app-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16rpx;
+}
+
+/* 徽标（未读角标） */
+.app-badge {
+  background-color: #f53f3f;
+  border-radius: 16rpx;
+  padding: 2rpx 12rpx;
+  margin-left: 8rpx;
+}
+
+.app-badge-text {
+  color: #ffffff;
+  font-size: 20rpx;
+}
+
+/* 状态/级别标签 */
+.app-tag {
+  border-radius: 6rpx;
+  padding: 4rpx 12rpx;
+  background-color: #e8f3ff;
+}
+
+.app-tag-text {
+  color: #1f6feb;
+  font-size: 22rpx;
+}
+
+.app-tag-warn {
+  background-color: #fff3e8;
+}
+
+.app-tag-warn-text {
+  color: #d25f00;
+  font-size: 22rpx;
+}
+
+.app-tag-danger {
+  background-color: #ffece8;
+}
+
+.app-tag-danger-text {
+  color: #f53f3f;
+  font-size: 22rpx;
+}
+
+/* 过滤片（状态筛选 chips） */
+.app-chip {
+  border-radius: 24rpx;
+  padding: 8rpx 24rpx;
+  margin-right: 12rpx;
+  background-color: #f2f3f5;
+}
+
+.app-chip-text {
+  font-size: 24rpx;
+  color: #4e5969;
+}
+
+.app-chip-active {
+  background-color: #1f6feb;
+}
+
+.app-chip-active-text {
+  color: #ffffff;
+}
+
+/* 空态/错误提示 */
+.app-empty {
+  color: #86909c;
+  font-size: 26rpx;
+  text-align: center;
+  margin-top: 40rpx;
+}
+
+.app-error {
+  color: #f53f3f;
+  font-size: 24rpx;
+  margin-top: 12rpx;
+}
+
+/* 遮罩面板（转工单/提交弹层；小程序用自绘面板替代 Modal 组件） */
+.app-mask {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.45);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.app-panel {
+  background-color: #ffffff;
+  border-radius: 16rpx 16rpx 0 0;
+  padding: 32rpx 24rpx;
+  max-height: 70vh;
+  overflow-y: scroll;
+}

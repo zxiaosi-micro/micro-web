@@ -1,0 +1,50 @@
+// index.scss · 首页私有样式（扫码按钮 + 快捷入口网格）。
+
+/* 扫码主按钮（覆盖 Button 原生边框） */
+.index-scan {
+  margin-top: 24px;
+  background-color: #1f6feb;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 28px;
+}
+
+.index-scan::after {
+  border: none;
+}
+
+/* 跳转链接 */
+.index-link {
+  color: #1f6feb;
+  font-size: 26px;
+}
+
+/* 快捷入口 2x2 网格 */
+.index-grid {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.index-grid-item {
+  width: 48%;
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 28px 24px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.index-grid-title {
+  font-size: 30px;
+  font-weight: bold;
+  color: #1f2329;
+}
+
+.index-grid-sub {
+  font-size: 24px;
+  color: #86909c;
+  margin-top: 8px;
+}

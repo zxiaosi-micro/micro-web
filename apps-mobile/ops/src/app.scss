@@ -1,0 +1,141 @@
+// app.scss · 全局样式（RN 兼容写法：仅单类选择器 + flex 布局，禁止后代/嵌套选择器——
+// taro-rn 的 css-to-rn 转换只支持扁平类，复杂级联请写内联样式）。
+
+page {
+  background-color: #f5f6f8;
+}
+
+/* 页面容器 */
+.app-page {
+  flex: 1;
+  padding: 24px;
+  background-color: #f5f6f8;
+}
+
+/* 卡片 */
+.app-card {
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+/* 主标题/次要文本 */
+.app-title {
+  font-size: 32px;
+  font-weight: bold;
+  color: #1f2329;
+}
+
+.app-sub {
+  font-size: 24px;
+  color: #86909c;
+  margin-top: 8px;
+}
+
+/* 主按钮 / 次按钮 / 危险按钮 */
+.app-btn {
+  background-color: #1f6feb;
+  border-radius: 8px;
+  padding: 20px 24px;
+  margin-top: 20px;
+}
+
+.app-btn-text {
+  color: #ffffff;
+  font-size: 28px;
+  text-align: center;
+}
+
+.app-btn-plain {
+  background-color: #f2f3f5;
+  border-radius: 8px;
+  padding: 20px 24px;
+  margin-top: 16px;
+}
+
+.app-btn-plain-text {
+  color: #1f6feb;
+  font-size: 28px;
+  text-align: center;
+}
+
+.app-btn-danger-text {
+  color: #f53f3f;
+  font-size: 28px;
+  text-align: center;
+}
+
+/* 输入框 */
+.app-input {
+  background-color: #f7f8fa;
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 16px;
+  font-size: 28px;
+}
+
+/* 行布局 */
+.app-row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+}
+
+/* 徽标 */
+.app-badge {
+  background-color: #f53f3f;
+  border-radius: 16px;
+  padding: 2px 12px;
+  margin-left: 8px;
+}
+
+.app-badge-text {
+  color: #ffffff;
+  font-size: 20px;
+}
+
+/* 状态/级别标签 */
+.app-tag {
+  border-radius: 6px;
+  padding: 4px 12px;
+  background-color: #e8f3ff;
+}
+
+.app-tag-text {
+  color: #1f6feb;
+  font-size: 22px;
+}
+
+.app-tag-warn {
+  background-color: #fff3e8;
+}
+
+.app-tag-warn-text {
+  color: #d25f00;
+  font-size: 22px;
+}
+
+.app-tag-danger {
+  background-color: #ffece8;
+}
+
+.app-tag-danger-text {
+  color: #f53f3f;
+  font-size: 22px;
+}
+
+/* 空态/错误提示 */
+.app-empty {
+  color: #86909c;
+  font-size: 26px;
+  text-align: center;
+  margin-top: 40px;
+}
+
+.app-error {
+  color: #f53f3f;
+  font-size: 24px;
+  margin-top: 12px;
+}

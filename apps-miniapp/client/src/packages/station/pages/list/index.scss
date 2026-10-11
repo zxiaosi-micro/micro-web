@@ -1,0 +1,57 @@
+/* 场站分包（列表+详情）私有样式 */
+
+.st-item {
+  position: relative;
+}
+
+.st-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.st-name {
+  font-size: 30px;
+  font-weight: 600;
+  color: #1f2329;
+}
+
+.st-meta {
+  display: block;
+  font-size: 24px;
+  color: #8a919f;
+  margin-top: 6px;
+}
+
+.st-summary {
+  display: flex;
+  margin-top: 12px;
+}
+
+.st-summary-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.st-summary-val {
+  font-size: 32px;
+  font-weight: 600;
+  color: #1f2329;
+}
+
+.st-summary-key {
+  font-size: 22px;
+  color: #8a919f;
+  margin-top: 4px;
+}
+
+.st-online {
+  color: #0a7d43;
+}
+
+.st-offline {
+  color: #b42318;
+}
