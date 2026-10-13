@@ -41,8 +41,10 @@ const AUTH_SEG_MAX = 11000;
 const RETRY_BASE_MS = 30_000;
 const RETRY_MAX_MS = 300_000;
 
+/** 离线可缓存的工单动作（受理/开工/提交结果） */
 export type DraftAction = "accept" | "start" | "submit";
 
+/** 单条离线草稿（持久化于 Taro storage，含重试与冲突状态） */
 export interface DraftEntry {
   /** client_action_id：幂等键，uuid v4；入队即生成，重放全程不变（服务端据它去重） */
   client_action_id: string;
@@ -56,6 +58,7 @@ export interface DraftEntry {
   last_error?: string;
 }
 
+/** 队列快照（订阅回调与角标渲染的数据结构） */
 export interface QueueSnapshot {
   /** 待同步条数（pending 态，工作台角标数据源） */
   pendingCount: number;
@@ -70,6 +73,7 @@ export interface QueueSnapshot {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
+/** 生成 uuid v4（client_action_id 幂等键用；Math.random 实现见上方说明） */
 export function uuidv4(): string {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (ch) => {
     const r = (Math.random() * 16) | 0;
@@ -122,6 +126,7 @@ function isDraftEntry(v: unknown): v is DraftEntry {
 type Listener = (snapshot: QueueSnapshot) => void;
 const listeners = new Set<Listener>();
 
+/** 订阅队列快照变更（立即回调一次当前快照；返回退订函数） */
 export function subscribe(listener: Listener): () => void {
   listeners.add(listener);
   listener(snapshotOf(loadQueue(), syncing));

@@ -9,6 +9,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+/** 轮询配置项 */
 export interface UsePollingOptions {
   /** 轮询间隔 ms（默认 10000；configcenter admin-bff/polling.yml 可调，S4 接入） */
   intervalMs?: number;
@@ -16,6 +17,7 @@ export interface UsePollingOptions {
   enabled?: boolean;
 }
 
+/** 轮询状态（失败保留上次 data + error 态，下次轮询自然收敛） */
 export interface UsePollingResult<T> {
   data: T | null;
   error: Error | null;
@@ -24,6 +26,7 @@ export interface UsePollingResult<T> {
   refresh: () => void;
 }
 
+/** 统一轮询 Hook：页面隐藏自动暂停、回前台立即拉一次、慢请求不堆积（in-flight 跳过） */
 export function usePolling<T>(fetcher: () => Promise<T>, options: UsePollingOptions = {}): UsePollingResult<T> {
   const intervalMs = options.intervalMs ?? 10_000;
   const enabled = options.enabled ?? true;

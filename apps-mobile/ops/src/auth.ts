@@ -26,6 +26,7 @@ const REFRESH_KEY = "ops.refresh";
 const ME_KEY = "ops.me";
 const LOGIN_PAGE = "/pages/login/index";
 
+/** token 存取器实现（Taro storage；RN 目标经 taro-rn 桥接 AsyncStorage） */
 export const tokenStore: TokenStore = {
   getAccessToken: () => Taro.getStorageSync<string>(ACCESS_KEY) || null,
   getRefreshToken: () => Taro.getStorageSync<string>(REFRESH_KEY) || null,
@@ -71,10 +72,12 @@ export function setupAuth(): void {
   });
 }
 
+/** 本地是否有登录态（仅判 access token 存在；离线 flush 前置检查用） */
 export function isLoggedIn(): boolean {
   return tokenStore.getAccessToken() !== null;
 }
 
+/** 登录结果（登录页分流：成功 / 锁定倒计时 / 报错文案） */
 export interface LoginResult {
   ok: boolean;
   /** 10407 锁定剩余秒数（登录页倒计时）；10400 凭证错误 msg 直接展示 */

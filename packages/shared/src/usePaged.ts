@@ -3,18 +3,22 @@
 import { useCallback, useState } from "react";
 import { usePolling } from "./usePolling";
 
+/** 每页条数上限（与后端 model List size 上限同源，超限自动钳制） */
 export const PAGE_SIZE_MAX = 100;
 
+/** 归一后的分页请求参数（传给 fetcher） */
 export interface PageParams {
   page: number;
   size: number;
 }
 
+/** 后端标准分页响应 */
 export interface PagedResp<T> {
   list: T[];
   total: number;
 }
 
+/** 分页列表状态（含翻页/改页大小/手动刷新；数据经 usePolling 轮询） */
 export interface UsePagedResult<T> {
   list: T[];
   total: number;

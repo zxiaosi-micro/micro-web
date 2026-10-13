@@ -11,12 +11,14 @@ import type { MeResp } from "../types/admin-bff";
 let perms: Set<string> = new Set();
 let loaded = false;
 
+/** 刷新权限码集合（登录/换 me 后调用；缺省从缓存 me 读取） */
 export function refreshPerms(me?: MeResp | null): void {
   const source = me ?? cachedMe();
   perms = new Set(source?.perms ?? []);
   loaded = true;
 }
 
+/** 是否持有权限码（未刷新过则先从缓存兜底加载一次） */
 export function hasPerm(code: string): boolean {
   if (!loaded) {
     refreshPerms();
@@ -24,6 +26,7 @@ export function hasPerm(code: string): boolean {
   return perms.has(code);
 }
 
+/** 是否持有任一权限码（任一命中即可见） */
 export function hasAnyPerm(...codes: string[]): boolean {
   return codes.some((c) => hasPerm(c));
 }

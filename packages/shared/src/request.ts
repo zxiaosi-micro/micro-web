@@ -8,6 +8,7 @@
 //     排队等待后重放原请求）；10402 → 互斥弹窗回调（登出）；10406 → 提级弹窗回调；
 //   - ID 一律字符串渲染由类型约束（apitypes 生成物）。
 
+/** 后端统一响应信封（code=0 成功；业务错误 HTTP 200 承载） */
 export interface Envelope<T> {
   code: number;
   msg: string;
@@ -20,7 +21,7 @@ export const CodeInvalidCredential = 10400; // 登录页报错
 export const CodeTokenInvalid = 10401; // 静默单飞刷新
 export const CodeSessionKicked = 10402; // 互斥弹窗
 export const CodeSessionRevoked = 10403; // 跳登录
-export const CodeAccountDisabled = 10404;
+export const CodeAccountDisabled = 10404; // 强制登出
 export const CodeSessionExpired = 10405; // 跳登录
 export const CodeStepUpRequired = 10406; // 提级弹窗
 export const CodeLoginLocked = 10407; // 登录页倒计时
@@ -40,6 +41,7 @@ export interface RequestConfig {
   onForceLogout?: () => void;
 }
 
+/** access/refresh token 存取抽象（各端自选 storage 实现） */
 export interface TokenStore {
   getAccessToken(): string | null;
   getRefreshToken(): string | null;
@@ -47,9 +49,10 @@ export interface TokenStore {
   clear(): void;
 }
 
+/** 业务错误对象（code/msg 保留后端语义；httpStatus 仅系统级异常有意义） */
 export class ApiError extends Error {
-  readonly code: number;
-  readonly httpStatus: number;
+  readonly code: number; // 业务错误码（errcode 同源；-1=非 JSON 系统错误）
+  readonly httpStatus: number; // HTTP 状态码
 
   constructor(code: number, msg: string, httpStatus: number) {
     super(msg);
@@ -62,6 +65,7 @@ export class ApiError extends Error {
 /** 单飞刷新状态（模块级：并发 401 共享一次 refresh） */
 let refreshing: Promise<void> | null = null;
 
+/** 是否有刷新在途（并发 401 排队判断用，测试可断言） */
 export function isRefreshing(): boolean {
   return refreshing !== null;
 }
@@ -69,10 +73,12 @@ export function isRefreshing(): boolean {
 /** 全局配置（app 入口 install 一次） */
 let cfg: RequestConfig | null = null;
 
+/** 安装全局配置（必须在首个请求前调用） */
 export function configureRequest(config: RequestConfig): void {
   cfg = config;
 }
 
+/** 取全局配置（未配置抛错，防静默裸 fetch） */
 export function getConfig(): RequestConfig {
   if (!cfg) {
     throw new Error("request: 先调用 configureRequest()");
@@ -185,20 +191,24 @@ async function doRefresh(): Promise<void> {
   c.auth.setTokens(body.data.tokens.access_token, body.data.tokens.refresh_token);
 }
 
-// ---- 便捷方法 ----
+// ---- 便捷方法（自动 JSON 序列化；业务错误统一抛 ApiError）----
 
+/** GET 请求 */
 export function get<T>(path: string): Promise<T> {
   return request<T>(path);
 }
 
+/** POST 请求（data 自动 JSON.stringify） */
 export function post<T>(path: string, data?: unknown): Promise<T> {
   return request<T>(path, { method: "POST", body: data === undefined ? undefined : JSON.stringify(data) });
 }
 
+/** PUT 请求（data 自动 JSON.stringify） */
 export function put<T>(path: string, data?: unknown): Promise<T> {
   return request<T>(path, { method: "PUT", body: data === undefined ? undefined : JSON.stringify(data) });
 }
 
+/** DELETE 请求 */
 export function del<T>(path: string): Promise<T> {
   return request<T>(path, { method: "DELETE" });
 }

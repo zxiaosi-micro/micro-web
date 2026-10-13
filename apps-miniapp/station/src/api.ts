@@ -53,16 +53,19 @@ export const stationMonitor = (stationId: string) =>
 
 // ---- 轮询增量（FR-OPS-010：10s，未读计数 + since_id） ----
 
+/** 增量轮询游标（页面持有，unread 驱动角标） */
 export interface PendingState {
   unread: number;
   sinceId: string;
 }
 
+/** 告警增量（since_id 之后的新告警） */
 export const pendingAlerts = (stationId: string, sinceId: string) =>
   get<AlertPendingResp>(
     `/alerts/pending?station_id=${encodeURIComponent(requireStationId(stationId))}&since_id=${encodeURIComponent(sinceId)}&limit=20`,
   );
 
+/** 工单增量（since_id 之后的新工单） */
 export const pendingTickets = (stationId: string, sinceId: string) =>
   get<TicketPendingResp>(
     `/tickets/pending?station_id=${encodeURIComponent(requireStationId(stationId))}&since_id=${encodeURIComponent(sinceId)}&limit=20`,
@@ -88,11 +91,14 @@ export const listAlerts = (stationId: string, status?: string) =>
     `/alerts?station_id=${encodeURIComponent(requireStationId(stationId))}${status ? `&status=${status}` : ""}&page=1&size=50`,
   );
 
+/** POST /alerts/:id/ack · 确认告警（OPEN→ACK） */
 export const ackAlert = (alertId: string) => post<SimpleResp>(`/alerts/${alertId}/ack`, {});
+/** POST /alerts/:id/transfer · 告警转工单（auto_dispatch=true 自动派单） */
 export const transferAlert = (alertId: string, autoDispatch: boolean) =>
   post<{ ticket_id: string; ticket_no: string }>(`/alerts/${alertId}/transfer`, {
     auto_dispatch: autoDispatch,
   });
+/** POST /alerts/:id/close · 关闭告警（需原因，RESOLVED 终态） */
 export const closeAlert = (alertId: string, reason: string) =>
   post<SimpleResp>(`/alerts/${alertId}/close`, { reason });
 
@@ -105,17 +111,23 @@ export const listTickets = (stationId: string, status?: string) =>
 
 /** GET /tickets/:id · 工单详情（含流转日志；契约无 station_id 字段，服务端 data_scope 兜底） */
 export const getTicket = (ticketId: string) => get<TicketGetResp>(`/tickets/${ticketId}`);
+/** POST /tickets/:id/accept · 受理工单（状态机动作，ASSIGNED→ACCEPTED） */
 export const acceptTicket = (id: string) => post<SimpleResp>(`/tickets/${id}/accept`, {});
+/** POST /tickets/:id/start · 开工（ACCEPTED→STARTED） */
 export const startTicket = (id: string) => post<SimpleResp>(`/tickets/${id}/start`, {});
+/** POST /tickets/:id/submit · 提交结果（STARTED→DONE） */
 export const submitTicket = (id: string, result: string) => post<SimpleResp>(`/tickets/${id}/submit`, { result });
+/** GET /tickets/match-staff · 派单候选（区域+技能匹配） */
 export const matchStaff = (stationId: string) =>
   get<{ list: { user_id: string; name: string; staff_type: string }[] }>(
     `/tickets/match-staff?station_id=${encodeURIComponent(requireStationId(stationId))}`,
   );
+/** POST /tickets/:id/dispatch · 派单（assigneeUid 空 = 自动匹配） */
 export const dispatchTicket = (id: string, assigneeUid: string) =>
   post<{ assignee_uid: string; assignee_name: string }>(`/tickets/${id}/dispatch`, {
     assignee_uid: assigneeUid || undefined,
   });
+/** GET /tickets/:id/sla-timer · SLA 计时器视图（响应/解决剩余时间） */
 export const slaTimer = (ticketId: string) => get<{ timer: SlaTimerView }>(`/tickets/${ticketId}/sla-timer`);
 
 // ---- 巡检 ----

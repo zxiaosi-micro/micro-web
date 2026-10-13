@@ -26,6 +26,7 @@ const REFRESH_KEY = "micro.refresh";
 const ME_KEY = "micro.me";
 const LOGIN_PAGE = "/pages/login/index";
 
+/** token 存取器实现（Taro storage 持久化，跨启动保留登录态） */
 export const tokenStore: TokenStore = {
   getAccessToken: () => Taro.getStorageSync<string>(ACCESS_KEY) || null,
   getRefreshToken: () => Taro.getStorageSync<string>(REFRESH_KEY) || null,
@@ -74,10 +75,12 @@ export function setupAuth(): void {
   });
 }
 
+/** 本地是否有登录态（仅判 access token 存在，不校验有效性） */
 export function isLoggedIn(): boolean {
   return tokenStore.getAccessToken() !== null;
 }
 
+/** wxLogin 结果（登录页据此分流到绑定手机或直接进入） */
 export interface WxLoginResult {
   ok: boolean;
   /** 微信首登未绑手机 → 登录页切换到手机号绑定表单 */

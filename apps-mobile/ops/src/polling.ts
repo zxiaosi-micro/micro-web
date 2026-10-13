@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDidHide, useDidShow } from "@tarojs/taro";
 
+/** 轮询配置项 */
 export interface UsePollingOptions {
   /** 轮询间隔 ms（默认 10000；configcenter mobile-bff/polling.yml 可调） */
   intervalMs?: number;
@@ -16,6 +17,7 @@ export interface UsePollingOptions {
   enabled?: boolean;
 }
 
+/** 轮询状态（失败保留上次 data + error 态） */
 export interface UsePollingResult<T> {
   data: T | null;
   error: Error | null;
@@ -24,6 +26,7 @@ export interface UsePollingResult<T> {
   refresh: () => void;
 }
 
+/** App 轮询 Hook（useDidShow/useDidHide 显隐暂停，与小程序端同构） */
 export function usePolling<T>(fetcher: () => Promise<T>, options: UsePollingOptions = {}): UsePollingResult<T> {
   const intervalMs = options.intervalMs ?? 10_000;
   const enabled = options.enabled ?? true;

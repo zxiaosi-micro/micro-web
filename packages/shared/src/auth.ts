@@ -10,6 +10,7 @@ const ACCESS_KEY = "micro.access";
 const REFRESH_KEY = "micro.refresh";
 const ME_KEY = "micro.me";
 
+/** token 存取器实现（sessionStorage：标签页隔离，登出时连 me 缓存一并清） */
 export const tokenStore: TokenStore = {
   getAccessToken: () => sessionStorage.getItem(ACCESS_KEY),
   getRefreshToken: () => sessionStorage.getItem(REFRESH_KEY),
@@ -35,6 +36,7 @@ export function setupAuth(hooks: {
   configureRequest({ auth: tokenStore, ...hooks });
 }
 
+/** 登录结果（登录页分流：成功 / 锁定倒计时 / 报错文案） */
 export interface LoginResult {
   ok: boolean;
   /** 10407 锁定剩余秒数（倒计时）；10400 凭证错误 msg 直接展示 */
@@ -43,6 +45,7 @@ export interface LoginResult {
   me?: LoginResp;
 }
 
+/** 账号密码登录：成功即落 token 并预热 /auth/me；失败折叠成 LoginResult（不抛异常） */
 export async function login(mobile: string, password: string): Promise<LoginResult> {
   try {
     const resp = await post<LoginResp>("/auth/login", { mobile, password });
@@ -78,6 +81,7 @@ export async function fetchMe(): Promise<MeResp | null> {
   }
 }
 
+/** 读取缓存的 /auth/me 快照（路由守卫同步判断登录态用，不发请求） */
 export function cachedMe(): MeResp | null {
   const raw = sessionStorage.getItem(ME_KEY);
   if (!raw) {
@@ -90,6 +94,7 @@ export function cachedMe(): MeResp | null {
   }
 }
 
+/** 登出：通知后端吊销会话（尽力而为）+ 清本地 token/me 缓存 */
 export function logout(): Promise<void> {
   const p = post<unknown>("/auth/logout").catch(() => undefined); // 尽力而为
   tokenStore.clear();

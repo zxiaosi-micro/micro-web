@@ -11,6 +11,7 @@
 
 import Taro from "@tarojs/taro";
 
+/** 后端统一响应信封（与 shared 同构） */
 export interface Envelope<T> {
   code: number;
   msg: string;
@@ -34,10 +35,12 @@ const REFRESHABLE_CODES = new Set<number>([CodeTokenInvalid, CodeSessionRevoked,
 /** 认证段：必须重登（清 token + 跳登录页） */
 const FORCE_LOGOUT_CODES = new Set<number>([CodeSessionKicked, CodeSessionRevoked, CodeAccountDisabled, CodeSessionExpired]);
 
+/** dev 直连 mobile-bff 缺省地址（设置页可改并持久化） */
 export const DEFAULT_BASE_URL = "http://127.0.0.1:8890/api/v1";
 const BASE_URL_KEY = "ops.server.base";
 const REQUEST_TIMEOUT_MS = 15_000;
 
+/** 业务错误对象（isNetworkError=true 时工单动作可转离线草稿） */
 export class ApiError extends Error {
   readonly code: number;
   readonly httpStatus: number;
@@ -53,10 +56,12 @@ export class ApiError extends Error {
   }
 }
 
+/** 判定是否网络层失败（offline.ts 转离线草稿的分流依据） */
 export function isNetworkError(e: unknown): boolean {
   return e instanceof ApiError && e.isNetworkError;
 }
 
+/** 请求层钩子（app 启动安装；导航回调由 auth.ts 注入） */
 export interface RequestHooks {
   auth: TokenStore;
   /** 10402 同端互斥/会话失效 → 跳登录（auth.ts 注入导航，模块内做去重） */
@@ -65,6 +70,7 @@ export interface RequestHooks {
   onStepUpRequired?: () => void;
 }
 
+/** token 存取抽象（Taro/taro-rn 桥接 storage 实现，见 auth.ts） */
 export interface TokenStore {
   getAccessToken(): string | null;
   getRefreshToken(): string | null;
@@ -102,6 +108,7 @@ export function restoreBaseURL(): void {
   }
 }
 
+/** 当前服务端地址（设置页回显用） */
 export function getBaseURL(): string {
   return baseURL;
 }
@@ -231,8 +238,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   throw new ApiError(body.code, body.msg, res.statusCode);
 }
 
-// ---- 便捷方法 ----
+// ---- 便捷方法（业务错误统一抛 ApiError；网络失败 isNetworkError=true）----
 
+/** GET 请求 */
 export function get<T>(path: string): Promise<T> {
   return request<T>(path, { method: "GET" });
 }

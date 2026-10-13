@@ -12,6 +12,7 @@
 
 import Taro from "@tarojs/taro";
 
+/** 后端统一响应信封（与 shared 同构） */
 export interface Envelope<T> {
   code: number;
   msg: string;
@@ -31,11 +32,13 @@ export const CodeLoginLocked = 10407; // 登录页倒计时
 export const CodePermissionDenied = 10408; // 403
 export const CodeRateLimited = 110429; // 429
 
+/** dev 直连 mobile-bff 缺省地址（生产经网关同域反代，入口处覆盖） */
 export const DEFAULT_BASE_URL = "http://127.0.0.1:8890/api/v1";
 const REQUEST_TIMEOUT_MS = 15_000;
 /** 微信登录 client 枚举（entry.api RefreshReq.options；与登录端一致，漂移即拒） */
 export const WX_CLIENT = "CLIENT_MINI";
 
+/** 业务错误对象（isNetworkError 区分网络层失败与业务错误） */
 export class ApiError extends Error {
   readonly code: number;
   readonly httpStatus: number;
@@ -51,10 +54,12 @@ export class ApiError extends Error {
   }
 }
 
+/** 判定是否网络层失败（离线兜底/静默重登的分流依据） */
 export function isNetworkError(e: unknown): boolean {
   return e instanceof ApiError && e.isNetworkError;
 }
 
+/** 请求层钩子（app 启动安装；auth/relogin 由 auth.ts 注入） */
 export interface RequestHooks {
   auth: TokenStore;
   /** 10402 互斥踢下线 → 清态后跳登录页（auth.ts 注入导航，模块内去重） */
@@ -67,6 +72,7 @@ export interface RequestHooks {
   onStepUpRequired?: () => void;
 }
 
+/** token 存取抽象（Taro storage 实现，见 auth.ts） */
 export interface TokenStore {
   getAccessToken(): string | null;
   getRefreshToken(): string | null;
@@ -233,12 +239,14 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   throw new ApiError(body.code, body.msg, res.statusCode);
 }
 
-// ---- 便捷方法 ----
+// ---- 便捷方法（业务错误统一抛 ApiError；网络失败 isNetworkError=true）----
 
+/** GET 请求 */
 export function get<T>(path: string): Promise<T> {
   return request<T>(path, { method: "GET" });
 }
 
+/** POST 请求（Taro data 自动序列化 JSON） */
 export function post<T>(path: string, data?: unknown): Promise<T> {
   return request<T>(path, { method: "POST", data });
 }

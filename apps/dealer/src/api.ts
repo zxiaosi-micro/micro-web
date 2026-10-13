@@ -27,6 +27,7 @@ import type {
 
 export type { DealerExtItem, OrderView, PartyItem, SkuItem };
 
+/** 通用分页参数 */
 export interface PageQuery {
   page: number;
   size: number;
@@ -40,6 +41,7 @@ export const listParties = (type: string, keyword: string, p: PageQuery) =>
     `/parties?page=${p.page}&size=${p.size}&type=${encodeURIComponent(type)}&keyword=${encodeURIComponent(keyword)}`,
   );
 
+/** 参与方详情（档案 + 联系方式） */
 export const getParty = (id: string) => get<PartyDetailResp>(`/parties/${id}`);
 
 /** 经销商扩展（等级/授权区域/返利规则；信用额度字段后端未提供——页面以"—"占位） */
@@ -62,6 +64,7 @@ export async function fetchSelfDealer(): Promise<{ party: PartyItem; ext: Dealer
 
 // ---- 商品目录（经销商价回退零售价 + 可售库存聚合） ----
 
+/** SKU 目录（keyword 模糊匹配） */
 export const listSkus = (keyword: string, p: PageQuery) =>
   get<SkuListResp>(`/skus?page=${p.page}&size=${p.size}&keyword=${encodeURIComponent(keyword)}`);
 
@@ -77,23 +80,29 @@ export const listInventory = (skuId: string, warehouseId: string, p: PageQuery) 
 
 // ---- 订单（下单/支付/取消，同 admin Orders 下单链路） ----
 
+/** 订单列表（status 过滤；keyword 匹配订单号） */
 export const listOrders = (keyword: string, status: string, p: PageQuery) =>
   get<OrderListResp>(
     `/orders?page=${p.page}&size=${p.size}&keyword=${encodeURIComponent(keyword)}&status=${status}`,
   );
 
+/** 订单详情（含明细与 Saga 状态） */
 export const getOrder = (orderNo: string) => get<OrderView>(`/orders/${orderNo}`);
 
+/** 创建订单（服务端价格快照；下单后须等 Saga 锁库存完成才可支付） */
 export const createOrder = (req: OrderCreateReq) => post<OrderCreateResp>("/orders", req);
 
+/** 支付订单（要求 Saga 已 LOCKED；前端有界等待后调用） */
 export const payOrder = (orderNo: string, channel: string) =>
   post<OrderPayResp>(`/orders/${orderNo}/pay`, { channel });
 
+/** 取消订单（CREATED 可直取消；超时由服务端自动取消） */
 export const cancelOrder = (orderNo: string, reason: string) =>
   post<unknown>(`/orders/${orderNo}/cancel`, { reason });
 
 // ---- 代客服务（SN 查设备 → 质保 → 代报修） ----
 
+/** 设备列表（SN keyword 检索，代客报修入口） */
 export const listDevices = (keyword: string, p: PageQuery) =>
   get<DeviceListResp>(`/devices?page=${p.page}&size=${p.size}&keyword=${encodeURIComponent(keyword)}`);
 
@@ -101,9 +110,11 @@ export const listDevices = (keyword: string, p: PageQuery) =>
 export const warrantiesByTarget = (sn: string) =>
   get<WarrantyTargetResp>(`/warranty-by-target?target_type=DEVICE&sn=${encodeURIComponent(sn)}`);
 
+/** 代客报修（SN 归属校验由服务端承担） */
 export const createTicket = (req: TicketCreateReq) => post<TicketCreateResp>("/tickets", req);
 
 // ---- 对账（发票列表；周期对账单 FR-FIN-005 L2 无端点——页面占位） ----
 
+/** 发票列表（对账页数据源） */
 export const listInvoices = (status: string, p: PageQuery) =>
   get<InvoiceListResp>(`/invoices?page=${p.page}&size=${p.size}&status=${status}`);
