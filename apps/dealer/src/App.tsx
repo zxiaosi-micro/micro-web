@@ -1,9 +1,10 @@
-// App.tsx · 经销商 Web hash 路由（S9-04：登录探测 + 6 业务页；同 admin/station 极简路由）。
+// App.tsx · 经销商 Web 路由（S9-04：手写 hash 路由 → react-router；白名单外回落工作台由 * 路由承担）。
+// 登录态由 me 是否存在决定，不占路由。
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { HashRouter, Route, Routes } from "react-router";
 import { Spin } from "antd";
-import { cachedMe, fetchMe } from "@micro/shared";
-import type { MeResp } from "@micro/shared/types";
+import { useAuthStore } from "./store/auth";
 import LoginPage from "./pages/Login";
 import DealerLayout from "./layouts/DealerLayout";
 import WorkbenchPage from "./pages/Workbench";
@@ -13,51 +14,34 @@ import OrdersPage from "./pages/Orders";
 import DealerServicePage from "./pages/DealerService";
 import ReconcilePage from "./pages/Reconcile";
 
-/** 合法路由（白名单外回落工作台）；登录态由 me 是否存在决定，不占路由 */
-const ROUTES = ["workbench", "catalog", "order-create", "orders", "service", "reconcile"];
-
-function currentRoute(): string {
-  const r = window.location.hash.replace(/^#\/?/, "") || "workbench";
-  return ROUTES.includes(r) ? r : "workbench";
-}
-
 export default function App() {
-  const [route, setRoute] = useState(currentRoute());
-  const [me, setMe] = useState<MeResp | null>(cachedMe());
-  const [checking, setChecking] = useState(true);
+  const me = useAuthStore((s) => s.me);
+  const checking = useAuthStore((s) => s.checking);
+  const bootstrap = useAuthStore((s) => s.bootstrap);
 
   useEffect(() => {
-    const onHash = () => setRoute(currentRoute());
-    window.addEventListener("hashchange", onHash);
-    return () => window.removeEventListener("hashchange", onHash);
-  }, []);
-
-  useEffect(() => {
-    // 启动期会话探测：有 token 则拉 /auth/me 预热（同 admin）
-    void fetchMe().then((m) => {
-      setMe(m);
-      setChecking(false);
-    });
-  }, []);
-
-  if (checking) {
-    return <Spin style={{ display: "grid", placeItems: "center", height: "100vh" }} />;
-  }
-  if (!me) {
-    return <LoginPage onLoggedIn={() => setMe(cachedMe())} />;
-  }
-
-  const page =
-    route === "catalog" ? <CatalogPage /> :
-    route === "order-create" ? <OrderCreatePage /> :
-    route === "orders" ? <OrdersPage /> :
-    route === "service" ? <DealerServicePage /> :
-    route === "reconcile" ? <ReconcilePage /> :
-    <WorkbenchPage />;
+    void bootstrap();
+  }, [bootstrap]);
 
   return (
-    <DealerLayout me={me} route={route} onNavigate={(r) => (window.location.hash = `/${r}`)} onLoggedOut={() => setMe(null)}>
-      {page}
-    </DealerLayout>
+    <HashRouter>
+      {checking ? (
+        <Spin style={{ display: "grid", placeItems: "center", height: "100vh" }} />
+      ) : !me ? (
+        <LoginPage />
+      ) : (
+        <Routes>
+          <Route element={<DealerLayout />}>
+            <Route index element={<WorkbenchPage />} />
+            <Route path="catalog" element={<CatalogPage />} />
+            <Route path="order-create" element={<OrderCreatePage />} />
+            <Route path="orders" element={<OrdersPage />} />
+            <Route path="service" element={<DealerServicePage />} />
+            <Route path="reconcile" element={<ReconcilePage />} />
+            <Route path="*" element={<WorkbenchPage />} />
+          </Route>
+        </Routes>
+      )}
+    </HashRouter>
   );
 }

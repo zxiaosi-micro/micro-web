@@ -4,6 +4,9 @@ import { App as AntApp, ConfigProvider, Modal } from "antd";
 import zhCN from "antd/locale/zh_CN";
 import { createRoot } from "react-dom/client";
 import { logout, setupAuth } from "@micro/shared";
+import { brandTheme } from "@micro/shared/theme";
+import "@micro/shared/theme.css";
+import { BRAND } from "./brand";
 import App from "./App";
 
 let kickedShown = false;
@@ -41,7 +44,7 @@ setupAuth({
 });
 
 createRoot(document.getElementById("root")!).render(
-  <ConfigProvider locale={zhCN}>
+  <ConfigProvider locale={zhCN} theme={brandTheme(BRAND)}>
     <AntApp>
       <App />
     </AntApp>

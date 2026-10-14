@@ -1,0 +1,400 @@
+/* theme.css · 三端 Web 共用设计系统（品牌变量 + 动画 + 移动端适配）。
+ *
+ * 布局壳由 ProLayout 承担，此处聚焦：
+ *   品牌变量（--brand / --brand-grad / --brand-glow，由 brandStyle() 挂载）
+ *   路由/卡片进场动画、登录页光斑、大屏效果、移动端兜底。
+ */
+
+/* ── 全局基调 ── */
+html,
+body {
+  background: #f4f6fa;
+}
+body {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* 细滚动条 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.35) transparent;
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.3);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.5);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ── 关键帧 ── */
+@keyframes micro-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes micro-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes micro-blob {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(46px, -36px) scale(1.16);
+  }
+  100% {
+    transform: translate(-30px, 26px) scale(0.94);
+  }
+}
+@keyframes micro-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+@keyframes micro-pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.35);
+  }
+  70% {
+    box-shadow: 0 0 0 14px rgba(255, 255, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+  }
+}
+@keyframes micro-screen-scan {
+  0% {
+    transform: translateY(-220px);
+  }
+  100% {
+    transform: translateY(1100px);
+  }
+}
+
+/* ── 路由过渡（PageTransition 挂 .page-enter） ── */
+.page-enter {
+  animation: micro-page-in 0.38s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+/* ── 指标卡（StatCard） ── */
+.stat-card {
+  animation: micro-page-in 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) backwards;
+  transition:
+    box-shadow 0.25s ease,
+    transform 0.25s ease;
+}
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px var(--brand-glow, rgba(15, 32, 67, 0.12));
+}
+.stat-card-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.stat-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  font-size: 24px;
+  flex: none;
+  transition: transform 0.25s ease;
+}
+.stat-card:hover .stat-icon {
+  transform: scale(1.08) rotate(-4deg);
+}
+.stat-card .ant-statistic-title {
+  margin-bottom: 2px;
+}
+
+/* ── 通用点缀 ── */
+/* ProLayout logo 图标位 */
+.brand-logo-mark {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--brand-grad, #2f6bff);
+  color: #fff;
+  font-size: 16px;
+  box-shadow: 0 4px 12px var(--brand-glow, transparent);
+}
+/* ProLayout 菜单整行可点（antd 标题内容默认只有文字宽度，行内其余区域点击不触发 menuItemRender） */
+.ant-pro-base-menu-inline-menu-item .ant-menu-title-content {
+  display: block;
+  width: 100%;
+}
+.ant-pro-base-menu-inline-menu-item .ant-menu-title-content > div {
+  width: 100%;
+}
+/* 品牌渐变文字 */
+.brand-text {
+  background: var(--brand-grad, #2f6bff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+/* 页面 H4 标题左侧品牌竖条（未走 PageContainer 的页面） */
+.app-main h4.ant-typography {
+  position: relative;
+  padding-left: 12px;
+}
+.app-main h4.ant-typography::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--brand, #2f6bff);
+}
+/* 品牌渐变主按钮 */
+.btn-brand-grad {
+  background: var(--brand-grad, #2f6bff);
+  border: none;
+  box-shadow: 0 6px 16px var(--brand-glow, transparent);
+  transition:
+    filter 0.2s ease,
+    transform 0.2s ease;
+}
+.btn-brand-grad:hover {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+}
+/* 快捷入口行（hover 右移） */
+.quick-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+.quick-link:hover {
+  background: #f1f5f9;
+  transform: translateX(4px);
+}
+.quick-link .anticon {
+  color: var(--brand, #2f6bff);
+  font-size: 16px;
+}
+
+/* ── 登录页（login-bg + 光斑 + 玻璃卡） ── */
+.login-bg {
+  position: relative;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: 16px;
+  background: linear-gradient(135deg, #eef3fb 0%, #e7edfa 45%, #f1eefa 100%);
+}
+.login-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  animation: micro-blob 16s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+.login-blob.b1 {
+  width: 420px;
+  height: 420px;
+  background: var(--brand-glow, rgba(47, 107, 255, 0.4));
+  opacity: 0.55;
+  top: -8%;
+  left: -6%;
+}
+.login-blob.b2 {
+  width: 340px;
+  height: 340px;
+  background: var(--brand, #2f6bff);
+  opacity: 0.16;
+  bottom: -10%;
+  right: -4%;
+  animation-delay: -6s;
+}
+.login-blob.b3 {
+  width: 240px;
+  height: 240px;
+  background: var(--brand, #2f6bff);
+  opacity: 0.12;
+  top: 55%;
+  left: 12%;
+  animation-delay: -11s;
+}
+.login-card {
+  position: relative;
+  z-index: 1;
+  width: min(400px, 100%);
+  border-radius: 20px;
+  box-shadow: 0 24px 60px rgba(15, 32, 67, 0.16);
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(18px) saturate(1.5);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  animation: micro-page-in 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) backwards;
+}
+.login-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+.login-brand-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  font-size: 26px;
+  color: #fff;
+  background: var(--brand-grad, #2f6bff);
+  box-shadow: 0 10px 24px var(--brand-glow, transparent);
+  animation: micro-float 3.4s ease-in-out infinite;
+}
+.login-brand-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e293b;
+}
+.login-brand-sub {
+  font-size: 12px;
+  color: #94a3b8;
+}
+.login-footnote {
+  text-align: center;
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 16px;
+  margin-bottom: 0;
+}
+
+/* ── 场站大屏（1920×1080 设计稿坐标系内） ── */
+.screen-root {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: radial-gradient(1200px 700px at 20% 0%, #0e2a52 0%, #081428 55%, #060f1f 100%);
+}
+.screen-scanline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 200px;
+  background: linear-gradient(180deg, rgba(54, 207, 201, 0) 0%, rgba(54, 207, 201, 0.06) 60%, rgba(54, 207, 201, 0.14) 100%);
+  animation: micro-screen-scan 8s linear infinite;
+  pointer-events: none;
+}
+.screen-title {
+  text-align: center;
+  font-size: 30px;
+  letter-spacing: 8px;
+  font-weight: 600;
+  margin: 4px 0 20px;
+  background: linear-gradient(90deg, #7ef7ef, #4ba3ff 55%, #b28bff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.screen-card {
+  background: linear-gradient(160deg, rgba(23, 52, 92, 0.66), rgba(13, 30, 58, 0.9));
+  border: 1px solid rgba(75, 163, 255, 0.28);
+  border-radius: 12px;
+  animation: micro-page-in 0.6s cubic-bezier(0.22, 0.61, 0.36, 1) backwards;
+  transition: border-color 0.3s ease;
+}
+.screen-card:hover {
+  border-color: rgba(126, 247, 239, 0.55);
+}
+.screen-card .ant-card-head {
+  border-bottom: 1px solid rgba(75, 163, 255, 0.2);
+}
+.screen-value {
+  font-size: 42px;
+  color: #fff;
+  font-weight: 600;
+  text-shadow: 0 0 18px rgba(75, 163, 255, 0.55);
+}
+.screen-alert-row {
+  animation: micro-fade-in 0.5s backwards;
+}
+
+/* ── 移动端适配 ── */
+@media (max-width: 767.5px) {
+  .hide-sm {
+    display: none !important;
+  }
+  /* 宽表格横向滚动兜底（ProTable 未显式 scroll.x 的列） */
+  .ant-table-content,
+  .ant-table-body {
+    overflow-x: auto !important;
+  }
+  /* 工具条/按钮组换行 */
+  .ant-space {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .ant-pagination {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .ant-modal {
+    max-width: calc(100vw - 16px) !important;
+  }
+  .stat-card-row {
+    gap: 12px;
+  }
+  .stat-icon {
+    width: 44px;
+    height: 44px;
+    font-size: 20px;
+  }
+  .ant-pro-page-container-children-container {
+    padding-inline: 12px !important;
+  }
+}
+
+/* 尊重系统"减少动态效果"偏好 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

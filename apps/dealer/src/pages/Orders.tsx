@@ -1,7 +1,9 @@
 // Orders.tsx · 我的订单/库存/客户（S9-04）：一页三 Tab。
 // 订单 buyer 过滤靠服务端 data_scope；支付倒计时本地 1s tick（pay_expire_at 服务端权威）；库存/客户只读。
+// 三个 Tab 均走 ProTable request（api.ts 封装函数原样调用）。
 
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
+import { useInterval } from "ahooks";
 import {
   App,
   Button,
@@ -15,8 +17,8 @@ import {
   Tag,
   Typography,
 } from "antd";
-import { ReloadOutlined } from "@ant-design/icons";
-import { usePaged } from "@micro/shared";
+import type { ActionType, ProColumns } from "@ant-design/pro-components";
+import { ProTable } from "@ant-design/pro-components";
 import type { InventoryItem, OrderView, PartyItem } from "@micro/shared/types";
 import { cancelOrder, getOrder, listInventory, listOrders, listParties, payOrder } from "../api";
 
@@ -53,16 +55,10 @@ function OrdersTab() {
   const [detail, setDetail] = useState<OrderView | null>(null);
   const [payChannel, setPayChannel] = useState("WECHAT");
   const [, setTick] = useState(0);
+  const actionRef = useRef<ActionType | undefined>(undefined);
 
-  // 倒计时 1s tick（仅列表挂载期间）
-  useEffect(() => {
-    const t = setInterval(() => setTick((v) => v + 1), 1000);
-    return () => clearInterval(t);
-  }, []);
-
-  const { list, total, page, size, loading, setPage, setSize, refresh } = usePaged<OrderView>(
-    (p) => listOrders(keyword, status, p),
-  );
+  // 倒计时 1s tick（仅列表挂载期间；ahooks useInterval 自动管理清理）
+  useInterval(() => setTick((v) => v + 1), 1000);
 
   const openDetail = async (o: OrderView) => {
     setDetail(await getOrder(o.order_no));
@@ -72,55 +68,62 @@ function OrdersTab() {
     const r = await payOrder(o.order_no, payChannel);
     message.success(`支付单 ${r.payment_no} 已发起`);
     setDetail(null);
-    refresh();
+    actionRef.current?.reload();
   };
 
   const doCancel = async (o: OrderView) => {
     await cancelOrder(o.order_no, "经销商取消");
     message.success("已取消（库存已补偿释放）");
     setDetail(null);
-    refresh();
+    actionRef.current?.reload();
   };
 
-  const columns = [
-    { title: "订单号", dataIndex: "order_no", render: (v: string, o: OrderView) => <a onClick={() => void openDetail(o)}>{v}</a> },
-    { title: "类型", dataIndex: "type", render: (v: string) => <Tag color={v === "STATION" ? "purple" : "blue"}>{v}</Tag> },
-    { title: "状态", dataIndex: "status", render: (v: string) => <Tag color={STATUS_TAG[v]?.color}>{STATUS_TAG[v]?.text ?? v}</Tag> },
-    { title: "总额", dataIndex: "total_amount", render: (v: string) => <Typography.Text strong>¥{v}</Typography.Text> },
+  const columns: ProColumns<OrderView>[] = [
+    { title: "订单号", dataIndex: "order_no", search: false, render: (_, o) => <a onClick={() => void openDetail(o)}>{o.order_no}</a> },
+    { title: "类型", dataIndex: "type", search: false, render: (_, o) => <Tag color={o.type === "STATION" ? "purple" : "blue"}>{o.type}</Tag> },
+    { title: "状态", dataIndex: "status", search: false, render: (_, o) => <Tag color={STATUS_TAG[o.status]?.color}>{STATUS_TAG[o.status]?.text ?? o.status}</Tag> },
+    { title: "总额", dataIndex: "total_amount", search: false, render: (_, o) => <Typography.Text strong>¥{o.total_amount}</Typography.Text> },
     {
       title: "支付倒计时",
       dataIndex: "pay_expire_at",
-      render: (v: number, o: OrderView) =>
+      search: false,
+      render: (_, o) =>
         ACTIVE_STATUSES.includes(o.status) ? (
-          <Typography.Text type={v && v - Date.now() < 300000 ? "danger" : undefined}>{fmtCountdown(v)}</Typography.Text>
+          <Typography.Text type={o.pay_expire_at && o.pay_expire_at - Date.now() < 300000 ? "danger" : undefined}>{fmtCountdown(o.pay_expire_at)}</Typography.Text>
         ) : (
           "—"
         ),
     },
-    { title: "创建时间", dataIndex: "created_at", render: (v: number) => (v ? new Date(v).toLocaleString("zh-CN") : "—") },
+    { title: "创建时间", dataIndex: "created_at", search: false, render: (_, o) => (o.created_at ? new Date(o.created_at).toLocaleString("zh-CN") : "—") },
   ];
 
   return (
     <>
-      <Space style={{ marginBottom: 16 }}>
-        <Input.Search onSearch={(v) => { setKeyword(v); setPage(1); }} style={{ width: 240 }} allowClear placeholder="订单号" />
-        <Select
-          value={status || "all"}
-          style={{ width: 140 }}
-          onChange={(v) => setStatus(v === "all" ? "" : v)}
-          options={Object.entries(STATUS_TAG).map(([k, t]) => ({ value: k, label: t.text }))}
-        />
-        <Button icon={<ReloadOutlined />} onClick={refresh}>刷新</Button>
-      </Space>
       <Typography.Text type="secondary" style={{ display: "block", marginBottom: 8 }}>
         仅显示本方订单（buyer 过滤由服务端 data_scope 承担）。
       </Typography.Text>
-      <Table
+      <ProTable<OrderView>
+        headerTitle="我的订单"
         rowKey="order_id"
+        actionRef={actionRef}
         columns={columns}
-        dataSource={list}
-        loading={loading}
-        pagination={{ current: page, pageSize: size, total, showSizeChanger: true, onChange: (p, s) => { setPage(p); setSize(s); } }}
+        search={false}
+        params={{ keyword, status }}
+        request={async (params) => {
+          const resp = await listOrders(keyword, status, { page: params.current ?? 1, size: params.pageSize ?? 10 });
+          return { data: resp.list, total: resp.total, success: true };
+        }}
+        pagination={{ defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 20, 50, 100] }}
+        toolBarRender={() => [
+          <Input.Search key="kw" onSearch={(v) => setKeyword(v)} style={{ width: 240 }} allowClear placeholder="订单号" />,
+          <Select
+            key="status"
+            value={status || "all"}
+            style={{ width: 140 }}
+            onChange={(v) => setStatus(v === "all" ? "" : v)}
+            options={Object.entries(STATUS_TAG).map(([k, t]) => ({ value: k, label: t.text }))}
+          />,
+        ]}
       />
 
       <Drawer title={`订单 ${detail?.order_no ?? ""}`} width={560} open={!!detail} onClose={() => setDetail(null)}>
@@ -180,37 +183,42 @@ function OrdersTab() {
 
 function InventoryTab() {
   const [warehouseId, setWarehouseId] = useState("");
-  const { list, total, page, size, loading, setPage, setSize, refresh } = usePaged<InventoryItem>(
-    (p) => listInventory("", warehouseId, p),
-  );
+  const actionRef = useRef<ActionType | undefined>(undefined);
+
+  const columns: ProColumns<InventoryItem>[] = [
+    { title: "SKU", dataIndex: "sku_id" },
+    { title: "仓库", dataIndex: "warehouse_id" },
+    { title: "可售", dataIndex: "available", render: (_, r) => <Typography.Text strong>{r.available}</Typography.Text> },
+    { title: "锁定", dataIndex: "locked" },
+    { title: "在途", dataIndex: "in_transit" },
+    { title: "不良", dataIndex: "defective" },
+    { title: "低库存阈值", dataIndex: "low_stock_threshold", render: (_, r) => r.low_stock_threshold || "—" },
+    { title: "更新时间", dataIndex: "updated_at", render: (_, r) => (r.updated_at ? new Date(r.updated_at).toLocaleString("zh-CN") : "—") },
+  ];
+
   return (
-    <>
-      <Space style={{ marginBottom: 16 }}>
+    <ProTable<InventoryItem>
+      headerTitle="库存"
+      rowKey="inventory_id"
+      actionRef={actionRef}
+      columns={columns}
+      search={false}
+      params={{ warehouseId }}
+      request={async (params) => {
+        const resp = await listInventory("", warehouseId, { page: params.current ?? 1, size: params.pageSize ?? 10 });
+        return { data: resp.list, total: resp.total, success: true };
+      }}
+      pagination={{ defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 20, 50, 100] }}
+      toolBarRender={() => [
         <Input.Search
-          onSearch={(v) => { setWarehouseId(v); setPage(1); }}
+          key="wh"
+          onSearch={(v) => setWarehouseId(v)}
           style={{ width: 200 }}
           allowClear
           placeholder="仓库 ID 过滤"
-        />
-        <Button icon={<ReloadOutlined />} onClick={refresh}>刷新</Button>
-      </Space>
-      <Table
-        rowKey="inventory_id"
-        columns={[
-          { title: "SKU", dataIndex: "sku_id" },
-          { title: "仓库", dataIndex: "warehouse_id" },
-          { title: "可售", dataIndex: "available", render: (v: number) => <Typography.Text strong>{v}</Typography.Text> },
-          { title: "锁定", dataIndex: "locked" },
-          { title: "在途", dataIndex: "in_transit" },
-          { title: "不良", dataIndex: "defective" },
-          { title: "低库存阈值", dataIndex: "low_stock_threshold", render: (v: number) => v || "—" },
-          { title: "更新时间", dataIndex: "updated_at", render: (v: number) => (v ? new Date(v).toLocaleString("zh-CN") : "—") },
-        ]}
-        dataSource={list}
-        loading={loading}
-        pagination={{ current: page, pageSize: size, total, showSizeChanger: true, onChange: (p, s) => { setPage(p); setSize(s); } }}
-      />
-    </>
+        />,
+      ]}
+    />
   );
 }
 
@@ -219,33 +227,36 @@ function InventoryTab() {
 function CustomersTab() {
   const { message } = App.useApp();
   const [keyword, setKeyword] = useState("");
-  const { list, total, page, size, loading, setPage, setSize, refresh } = usePaged<PartyItem>(
-    (p) => listParties("CUSTOMER", keyword, p),
-  );
+  const actionRef = useRef<ActionType | undefined>(undefined);
+
+  const columns: ProColumns<PartyItem>[] = [
+    { title: "名称", dataIndex: "name", search: false },
+    { title: "类型", dataIndex: "type", search: false, render: (_, r) => (r.type ?? []).map((t) => <Tag key={t}>{t}</Tag>) },
+    { title: "信用代码", dataIndex: "credit_code", search: false, render: (_, r) => r.credit_code || "—" },
+    { title: "区域", dataIndex: "region", search: false, render: (_, r) => r.region || "—" },
+    { title: "地址", dataIndex: "address", search: false, render: (_, r) => r.address || "—" },
+  ];
+
   return (
-    <>
-      <Space style={{ marginBottom: 16 }}>
-        <Input.Search onSearch={(v) => { setKeyword(v); setPage(1); }} style={{ width: 240 }} allowClear placeholder="客户名称/信用代码" />
-        <Button icon={<ReloadOutlined />} onClick={refresh}>刷新</Button>
-        {/* 占位：L2 待客户建档流程（FR-PTY-001 经销商可转客户，当前无建档端点授权） */}
-        <Button type="primary" onClick={() => message.info("占位：客户建档跳转待 L2（经销商可转客户，FR-PTY-001）")}>
+    <ProTable<PartyItem>
+      headerTitle="客户"
+      rowKey="party_id"
+      actionRef={actionRef}
+      columns={columns}
+      params={{ keyword }}
+      request={async (params) => {
+        const resp = await listParties("CUSTOMER", keyword, { page: params.current ?? 1, size: params.pageSize ?? 10 });
+        return { data: resp.list, total: resp.total, success: true };
+      }}
+      pagination={{ defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 20, 50, 100] }}
+      toolBarRender={() => [
+        <Input.Search key="kw" onSearch={(v) => setKeyword(v)} style={{ width: 240 }} allowClear placeholder="客户名称/信用代码" />,
+        // 占位：L2 待客户建档流程（FR-PTY-001 经销商可转客户，当前无建档端点授权）
+        <Button key="create" type="primary" onClick={() => message.info("占位：客户建档跳转待 L2（经销商可转客户，FR-PTY-001）")}>
           新建客户
-        </Button>
-      </Space>
-      <Table
-        rowKey="party_id"
-        columns={[
-          { title: "名称", dataIndex: "name" },
-          { title: "类型", dataIndex: "type", render: (v: string[]) => (v ?? []).map((t) => <Tag key={t}>{t}</Tag>) },
-          { title: "信用代码", dataIndex: "credit_code", render: (v: string) => v || "—" },
-          { title: "区域", dataIndex: "region", render: (v: string) => v || "—" },
-          { title: "地址", dataIndex: "address", render: (v: string) => v || "—" },
-        ]}
-        dataSource={list}
-        loading={loading}
-        pagination={{ current: page, pageSize: size, total, showSizeChanger: true, onChange: (p, s) => { setPage(p); setSize(s); } }}
-      />
-    </>
+        </Button>,
+      ]}
+    />
   );
 }
 

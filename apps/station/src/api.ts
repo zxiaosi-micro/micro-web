@@ -14,7 +14,6 @@ import type {
   StationMonitorResp,
   StationView,
   StationWebMeResp,
-  TicketBriefView,
   TicketGetResp,
   TicketPendingResp,
   TicketView,

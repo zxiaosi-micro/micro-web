@@ -1,11 +1,11 @@
-// Roles.tsx · 角色管理（S3-04：菜单权限树 + data_scope 编辑）。
+// Roles.tsx · 角色管理（S3-04：菜单权限树 + data_scope 编辑）。ProTable + ModalForm。
 
-import { useEffect, useState } from "react";
-import {
-  App, Button, Form, Input, Modal, Popconfirm, Radio, Space, Table, Tree, Typography,
-} from "antd";
+import { useEffect, useRef, useState } from "react";
+import { App, Button, Form, Input, Popconfirm, Radio, Space, Tree } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
-import { del, get, Perm, post, put, usePaged } from "@micro/shared";
+import type { ActionType, ProColumns } from "@ant-design/pro-components";
+import { ModalForm, ProFormText, ProTable } from "@ant-design/pro-components";
+import { del, get, Perm, post, put } from "@micro/shared";
 import type { MenuItem, RoleItem } from "@micro/shared/types";
 import type { DataNode } from "antd/es/tree";
 
@@ -33,9 +33,7 @@ function toTreeData(items: MenuItem[]): DataNode[] {
 
 export default function RolesPage() {
   const { message } = App.useApp();
-  const { list, total, page, size, loading, setPage, setSize, refresh } = usePaged<RoleItem>(
-    (p) => get(`/roles?page=${p.page}&size=${p.size}`),
-  );
+  const actionRef = useRef<ActionType | undefined>(undefined);
   const [editing, setEditing] = useState<RoleItem | "new" | null>(null);
   const [menuTree, setMenuTree] = useState<ReturnType<typeof toTreeData>>([]);
   const [checkedKeys, setCheckedKeys] = useState<string[]>([]);
@@ -66,8 +64,7 @@ export default function RolesPage() {
     }
   };
 
-  const submit = async () => {
-    const values = await form.validateFields();
+  const submit = async (values: Record<string, unknown>) => {
     const data_scope = JSON.stringify({ type: values.data_scope_type });
     if (editing === "new") {
       await post("/roles", { ...values, data_scope, menu_ids: checkedKeys });
@@ -76,18 +73,19 @@ export default function RolesPage() {
     }
     message.success("已保存（相关用户权限即时刷新）");
     setEditing(null);
-    refresh();
+    actionRef.current?.reload();
+    return true;
   };
 
-  const columns = [
-    { title: "角色码", dataIndex: "code", key: "code" },
-    { title: "角色名", dataIndex: "name", key: "name" },
-    { title: "数据域", dataIndex: "data_scope", key: "data_scope", render: (v: string) => v },
-    { title: "备注", dataIndex: "remark", key: "remark" },
+  const columns: ProColumns<RoleItem>[] = [
+    { title: "角色码", dataIndex: "code", search: false },
+    { title: "角色名", dataIndex: "name", search: false },
+    { title: "数据域", dataIndex: "data_scope", search: false },
+    { title: "备注", dataIndex: "remark", search: false },
     {
       title: "操作",
-      key: "actions",
-      render: (_: unknown, r: RoleItem) => (
+      valueType: "option",
+      render: (_, r) => (
         <Space>
           <Perm code="system:role:update">
             <Button size="small" onClick={() => void openEdit(r)}>编辑</Button>
@@ -96,7 +94,7 @@ export default function RolesPage() {
             <Popconfirm title="确认删除该角色?" onConfirm={async () => {
               await del(`/roles/${r.role_id}`);
               message.success("已删除");
-              refresh();
+              actionRef.current?.reload();
             }}>
               <Button size="small" danger type="link">删除</Button>
             </Popconfirm>
@@ -108,57 +106,63 @@ export default function RolesPage() {
 
   return (
     <>
-      <Typography.Title level={4}>角色管理</Typography.Title>
-      <Space style={{ marginBottom: 16 }}>
-        <Perm code="system:role:create">
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => void openEdit("new")}>新建角色</Button>
-        </Perm>
-      </Space>
-      <Table
+      <ProTable<RoleItem>
+        headerTitle="角色管理"
         rowKey="role_id"
+        actionRef={actionRef}
         columns={columns}
-        dataSource={list}
-        loading={loading}
-        pagination={{ current: page, pageSize: size, total, showSizeChanger: true, pageSizeOptions: [10, 20, 50, 100], onChange: (p, s) => { setPage(p); setSize(s); } }}
+        search={false}
+        request={async (params) => {
+          const resp = await get<{ list: RoleItem[]; total: number }>(
+            `/roles?page=${params.current ?? 1}&size=${params.pageSize ?? 10}`,
+          );
+          return { data: resp.list, total: resp.total, success: true };
+        }}
+        pagination={{ defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 20, 50, 100] }}
+        toolBarRender={() => [
+          <Perm key="create" code="system:role:create">
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => void openEdit("new")}>新建角色</Button>
+          </Perm>,
+        ]}
       />
-      <Modal
+      <ModalForm
         title={editing === "new" ? "新建角色" : "编辑角色"}
         open={editing !== null}
-        onOk={() => void submit()}
-        onCancel={() => setEditing(null)}
-        width={640}
-        destroyOnHidden
+        onOpenChange={(o) => { if (!o) setEditing(null); }}
+        form={form}
+        modalProps={{ destroyOnHidden: true, width: 640 }}
+        onFinish={submit}
       >
-        <Form form={form} layout="vertical">
-          <Form.Item name="code" label="角色码" rules={[{ required: true, message: "必填" }]}>
-            <Input disabled={editing !== "new"} placeholder="admin 等（唯一）" />
-          </Form.Item>
-          <Form.Item name="name" label="角色名" rules={[{ required: true, message: "必填" }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="data_scope_type" label="数据域">
-            <Radio.Group
-              options={[
-                { value: "ALL", label: "全部数据" },
-                { value: "ORG", label: "本组织" },
-                { value: "SELF", label: "仅本人" },
-              ]}
-            />
-          </Form.Item>
-          <Form.Item name="remark" label="备注">
-            <Input.TextArea rows={2} />
-          </Form.Item>
-          <Form.Item label="菜单权限树">
-            <Tree
-              checkable
-              defaultExpandAll
-              checkedKeys={checkedKeys}
-              onCheck={(keys) => setCheckedKeys(keys as string[])}
-              treeData={menuTree}
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
+        <ProFormText
+          name="code"
+          label="角色码"
+          disabled={editing !== "new"}
+          placeholder="admin 等（唯一）"
+          rules={[{ required: true, message: "必填" }]}
+        />
+        <ProFormText name="name" label="角色名" rules={[{ required: true, message: "必填" }]} />
+        <Form.Item name="data_scope_type" label="数据域">
+          <Radio.Group
+            options={[
+              { value: "ALL", label: "全部数据" },
+              { value: "ORG", label: "本组织" },
+              { value: "SELF", label: "仅本人" },
+            ]}
+          />
+        </Form.Item>
+        <Form.Item name="remark" label="备注">
+          <Input.TextArea rows={2} />
+        </Form.Item>
+        <Form.Item label="菜单权限树">
+          <Tree
+            checkable
+            defaultExpandAll
+            checkedKeys={checkedKeys}
+            onCheck={(keys) => setCheckedKeys(keys as string[])}
+            treeData={menuTree}
+          />
+        </Form.Item>
+      </ModalForm>
     </>
   );
 }

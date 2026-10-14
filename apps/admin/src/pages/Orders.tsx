@@ -1,12 +1,16 @@
 // Orders.tsx · 交易中心（S5-02）：订单列表（支付倒计时）/ 详情（Saga 进度条 + 人工介入）/ 退货 / 发运。
-// 约定：ID string（E8）；usePaged 分页；倒计时本地 1s tick（pay_expire_at 服务端权威）；严禁并发冒烟（E1）。
+// 约定：ID string（E8）；分页表走 ProTable；倒计时本地 1s tick（pay_expire_at 服务端权威）；严禁并发冒烟（E1）。
+// 详情抽屉子表 / 创建订单 / 退货申请 / 发运录入为交互 Modal，保留 antd。
 
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
+import { useInterval } from "ahooks";
 import {
   App, Button, Descriptions, Drawer, Form, Input, InputNumber, Modal, Select, Space, Steps, Table, Tabs, Tag, Typography,
 } from "antd";
-import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
-import { get, Perm, post, usePaged } from "@micro/shared";
+import { PlusOutlined } from "@ant-design/icons";
+import type { ActionType, ProColumns } from "@ant-design/pro-components";
+import { ProTable } from "@ant-design/pro-components";
+import { get, Perm, post } from "@micro/shared";
 import type { OrderView, SagaView } from "@micro/shared/types";
 
 const STATUS_TAG: Record<string, { text: string; color: string }> = {
@@ -50,16 +54,10 @@ function OrdersTab() {
   const [saga, setSaga] = useState<SagaView | null>(null);
   const [payTarget, setPayTarget] = useState<OrderView | null>(null);
   const [, setTick] = useState(0);
+  const actionRef = useRef<ActionType | undefined>(undefined);
 
-  // 倒计时 1s tick（仅列表挂载期间）
-  useEffect(() => {
-    const t = setInterval(() => setTick((v) => v + 1), 1000);
-    return () => clearInterval(t);
-  }, []);
-
-  const { list, total, page, size, loading, setPage, setSize, refresh } = usePaged<OrderView>(
-    (p) => get<{ list: OrderView[]; total: number }>(`/orders?page=${p.page}&size=${p.size}&keyword=${encodeURIComponent(keyword)}&status=${status}`),
-  );
+  // 倒计时 1s tick（仅列表挂载期间；ahooks useInterval 自动管理清理）
+  useInterval(() => setTick((v) => v + 1), 1000);
 
   const openDetail = async (o: OrderView) => {
     const [d, s] = await Promise.all([
@@ -79,29 +77,48 @@ function OrdersTab() {
           : s.status === "SKIPPED" ? "wait" : "wait") as "finish" | "process" | "error" | "wait",
   })) ?? [];
 
+  const columns: ProColumns<OrderView>[] = [
+    { title: "订单号", dataIndex: "order_no", search: false, render: (_, o) => <a onClick={() => void openDetail(o)}>{o.order_no}</a> },
+    { title: "类型", dataIndex: "type", search: false },
+    { title: "状态", dataIndex: "status", search: false, render: (_, o) => <Tag color={STATUS_TAG[o.status]?.color}>{STATUS_TAG[o.status]?.text ?? o.status}</Tag> },
+    { title: "总额", dataIndex: "total_amount", search: false, render: (_, o) => <Typography.Text strong>¥{o.total_amount}</Typography.Text> },
+    {
+      title: "支付倒计时",
+      dataIndex: "pay_expire_at",
+      search: false,
+      render: (_, o) =>
+        ["CREATED", "LOCKED", "PAYING"].includes(o.status)
+          ? <Typography.Text type={o.pay_expire_at && o.pay_expire_at - Date.now() < 300000 ? "danger" : undefined}>{fmtCountdown(o.pay_expire_at)}</Typography.Text>
+          : "—",
+    },
+    { title: "创建时间", dataIndex: "created_at", search: false, render: (_, o) => (o.created_at ? new Date(o.created_at).toLocaleString() : "—") },
+  ];
+
   return (
     <>
-      <Space style={{ marginBottom: 16 }}>
-        <Input.Search onSearch={(v) => { setKeyword(v); setPage(1); }} style={{ width: 240 }} allowClear placeholder="订单号" />
-        <Select value={status || "all"} style={{ width: 140 }} onChange={(v) => setStatus(v === "all" ? "" : v)}
-          options={Object.entries(STATUS_TAG).map(([k, t]) => ({ value: k, label: t.text }))} />
-        <Button icon={<ReloadOutlined />} onClick={refresh}>刷新</Button>
-        <Perm code="trade:order:create">
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setPayTarget({ order_no: "__new__" } as OrderView)}>创建订单</Button>
-        </Perm>
-      </Space>
-      <Table rowKey="order_id" columns={[
-        { title: "订单号", dataIndex: "order_no", render: (v: string, o: OrderView) => <a onClick={() => void openDetail(o)}>{v}</a> },
-        { title: "类型", dataIndex: "type" },
-        { title: "状态", dataIndex: "status", render: (v: string) => <Tag color={STATUS_TAG[v]?.color}>{STATUS_TAG[v]?.text ?? v}</Tag> },
-        { title: "总额", dataIndex: "total_amount", render: (v: string) => <Typography.Text strong>¥{v}</Typography.Text> },
-        { title: "支付倒计时", dataIndex: "pay_expire_at", render: (v: number, o: OrderView) =>
-          ["CREATED", "LOCKED", "PAYING"].includes(o.status)
-            ? <Typography.Text type={v && v - Date.now() < 300000 ? "danger" : undefined}>{fmtCountdown(v)}</Typography.Text>
-            : "—" },
-        { title: "创建时间", dataIndex: "created_at", render: (v: number) => v ? new Date(v).toLocaleString() : "—" },
-      ]} dataSource={list} loading={loading}
-        pagination={{ current: page, pageSize: size, total, showSizeChanger: true, onChange: (p, s) => { setPage(p); setSize(s); } }} />
+      <ProTable<OrderView>
+        headerTitle="订单"
+        rowKey="order_id"
+        actionRef={actionRef}
+        columns={columns}
+        search={false}
+        params={{ keyword, status }}
+        request={async (params) => {
+          const resp = await get<{ list: OrderView[]; total: number }>(
+            `/orders?page=${params.current ?? 1}&size=${params.pageSize ?? 10}&keyword=${encodeURIComponent(keyword)}&status=${status}`,
+          );
+          return { data: resp.list, total: resp.total, success: true };
+        }}
+        pagination={{ defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 20, 50, 100] }}
+        toolBarRender={() => [
+          <Input.Search key="kw" onSearch={(v) => setKeyword(v)} style={{ width: 240 }} allowClear placeholder="订单号" />,
+          <Select key="status" value={status || "all"} style={{ width: 140 }} onChange={(v) => setStatus(v === "all" ? "" : v)}
+            options={Object.entries(STATUS_TAG).map(([k, t]) => ({ value: k, label: t.text }))} />,
+          <Perm key="create" code="trade:order:create">
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setPayTarget({ order_no: "__new__" } as OrderView)}>创建订单</Button>
+          </Perm>,
+        ]}
+      />
 
       <Drawer title={`订单 ${detail?.order_no ?? ""}`} width={640} open={!!detail} onClose={() => { setDetail(null); setSaga(null); }}>
         {detail && (
@@ -130,7 +147,8 @@ function OrdersTab() {
                     <Button danger size="small" onClick={async () => {
                       await post(`/sagas/${saga.saga_id}/retry`, { remark: "前端人工重推" });
                       message.success("已重推");
-                      setDetail(null); refresh();
+                      setDetail(null);
+                      actionRef.current?.reload();
                     }}>人工介入重推</Button>
                   </Perm>
                 </div>
@@ -141,7 +159,8 @@ function OrdersTab() {
                 <Button type="primary" style={{ marginTop: 16 }} onClick={async () => {
                   const r = await post<{ payment_no: string; pay_params: string }>(`/orders/${detail.order_no}/pay`, { channel: "WECHAT" });
                   message.success(`支付单 ${r.payment_no} 已发起`);
-                  setDetail(null); refresh();
+                  setDetail(null);
+                  actionRef.current?.reload();
                 }}>发起支付（WECHAT）</Button>
               </Perm>
             )}
@@ -150,7 +169,8 @@ function OrdersTab() {
                 <Button danger style={{ marginTop: 16, marginLeft: 8 }} onClick={async () => {
                   await post(`/orders/${detail.order_no}/cancel`, { reason: "用户取消" });
                   message.success("已取消（库存已补偿释放）");
-                  setDetail(null); refresh();
+                  setDetail(null);
+                  actionRef.current?.reload();
                 }}>取消订单</Button>
               </Perm>
             )}
@@ -158,7 +178,7 @@ function OrdersTab() {
         )}
       </Drawer>
 
-      <CreateOrderModal open={payTarget?.order_no === "__new__"} onClose={() => setPayTarget(null)} onDone={() => { setPayTarget(null); refresh(); }} />
+      <CreateOrderModal open={payTarget?.order_no === "__new__"} onClose={() => setPayTarget(null)} onDone={() => { setPayTarget(null); actionRef.current?.reload(); }} />
     </>
   );
 }
@@ -193,29 +213,48 @@ function CreateOrderModal(props: { open: boolean; onClose: () => void; onDone: (
 
 // ---- 退货 ----
 
+interface ReturnOrderView {
+  order_id: string;
+  order_no: string;
+  status: string;
+  created_at: number;
+}
+
 function ReturnsTab() {
   const { message } = App.useApp();
   const [createOpen, setCreateOpen] = useState(false);
-  const { list, total, page, size, loading, setPage, setSize, refresh } = usePaged<Record<string, unknown>>(
-    (p) => get(`/orders?page=${p.page}&size=${p.size}&type=RETURN`),
-  );
+  const actionRef = useRef<ActionType | undefined>(undefined);
+
+  const columns: ProColumns<ReturnOrderView>[] = [
+    { title: "退货单号", dataIndex: "order_no" },
+    { title: "状态", dataIndex: "status", render: (_, r) => <Tag color={STATUS_TAG[r.status]?.color}>{STATUS_TAG[r.status]?.text ?? r.status}</Tag> },
+    { title: "创建时间", dataIndex: "created_at", render: (_, r) => (r.created_at ? new Date(r.created_at).toLocaleString() : "—") },
+  ];
+
   return (
     <>
-      <Space style={{ marginBottom: 16 }}>
-        <Button icon={<ReloadOutlined />} onClick={refresh}>刷新</Button>
-        <Perm code="trade:return:create">
-          <Button type="primary" onClick={() => setCreateOpen(true)}>退货申请</Button>
-        </Perm>
-      </Space>
       <Typography.Text type="secondary" style={{ display: "block", marginBottom: 8 }}>
         退货单以 RETURN 类型订单呈现；审批通过后由 finance 自动原路退回（order_return_approved → payment_refunded 回写 REFUNDED）。
       </Typography.Text>
-      <Table rowKey="order_id" columns={[
-        { title: "退货单号", dataIndex: "order_no" },
-        { title: "状态", dataIndex: "status", render: (v: string) => <Tag color={STATUS_TAG[v]?.color}>{STATUS_TAG[v]?.text ?? v}</Tag> },
-        { title: "创建时间", dataIndex: "created_at", render: (v: number) => v ? new Date(v).toLocaleString() : "—" },
-      ]} dataSource={list} loading={loading}
-        pagination={{ current: page, pageSize: size, total, onChange: (p, s) => { setPage(p); setSize(s); } }} />
+      <ProTable<ReturnOrderView>
+        headerTitle="退货"
+        rowKey="order_id"
+        actionRef={actionRef}
+        columns={columns}
+        search={false}
+        request={async (params) => {
+          const resp = await get<{ list: ReturnOrderView[]; total: number }>(
+            `/orders?page=${params.current ?? 1}&size=${params.pageSize ?? 10}&type=RETURN`,
+          );
+          return { data: resp.list, total: resp.total, success: true };
+        }}
+        pagination={{ defaultPageSize: 10, showSizeChanger: true }}
+        toolBarRender={() => [
+          <Perm key="create" code="trade:return:create">
+            <Button type="primary" onClick={() => setCreateOpen(true)}>退货申请</Button>
+          </Perm>,
+        ]}
+      />
       <Modal title="退货申请" open={createOpen} destroyOnClose onCancel={() => setCreateOpen(false)} onOk={async () => {
         // 基线：退货申请经原单号 + SKU/数量（表单直填）
         const orderNo = (document.getElementById("ret-order-no") as HTMLInputElement | null)?.value ?? "";
@@ -223,7 +262,8 @@ function ReturnsTab() {
         const qty = Number((document.getElementById("ret-qty") as HTMLInputElement | null)?.value ?? 0);
         await post("/return-orders", { order_no: orderNo, items: [{ sku_id: skuId, qty }], reason: "退货申请" });
         message.success("退货单已建（待审批）");
-        setCreateOpen(false); refresh();
+        setCreateOpen(false);
+        actionRef.current?.reload();
       }}>
         <Form layout="vertical">
           <Form.Item label="原销售单号"><Input id="ret-order-no" placeholder="ORD..." /></Form.Item>
@@ -243,15 +283,13 @@ function ShipmentsTab() {
   const [form] = Form.useForm();
   return (
     <>
-      <Space style={{ marginBottom: 16 }}>
-        <Perm code="trade:shipment:create">
-          <Button type="primary" onClick={() => setCreateOpen(true)}>创建发货单</Button>
-        </Perm>
-      </Space>
-      <Typography.Text type="secondary">
+      <Typography.Paragraph type="secondary">
         发货单按订单维度管理：创建 → 追加轨迹（手工基线）→ 签收确认（shipment_signed 事件驱动质保起算）。
         发货单明细随订单详情展示；本页提供操作入口。
-      </Typography.Text>
+      </Typography.Paragraph>
+      <Perm code="trade:shipment:create">
+        <Button type="primary" onClick={() => setCreateOpen(true)}>创建发货单</Button>
+      </Perm>
       <Modal title="创建发货单" open={createOpen} destroyOnClose onCancel={() => setCreateOpen(false)} onOk={async () => {
         const v = await form.validateFields();
         const items = String(v.items_raw ?? "").split("\n").filter(Boolean).map((line: string) => {
@@ -262,7 +300,8 @@ function ShipmentsTab() {
           order_no: v.order_no, warehouse_id: v.warehouse_id, items, carrier: v.carrier ?? "",
         });
         message.success(`发货单 ${r.shipment_no} 已建`);
-        form.resetFields(); setCreateOpen(false);
+        form.resetFields();
+        setCreateOpen(false);
       }}>
         <Form form={form} layout="vertical">
           <Form.Item name="order_no" label="订单号" rules={[{ required: true }]}><Input placeholder="ORD..." /></Form.Item>

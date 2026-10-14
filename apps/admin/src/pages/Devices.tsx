@@ -1,12 +1,15 @@
 // Devices.tsx · 设备中心（S6-01）：设备列表 / 详情（影子卡片+生命周期时间线+指令）/ OTA 任务（固件+灰度+回滚）。
-// 约定：ID string（E8）；usePaged 分页；指令下发 step-up（10406 → 全局提级弹窗）；严禁并发冒烟（E1）。
+// 约定：ID string（E8）；三个 Tab 分页表走 ProTable（筛选 params 联动）；指令下发 step-up（10406 → 全局提级弹窗）；
+// 详情抽屉子表与导入/创建弹窗保留 antd；严禁并发冒烟（E1）。
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   App, Button, Descriptions, Drawer, Form, Input, Modal, Select, Space, Steps, Table, Tabs, Tag, Typography,
 } from "antd";
-import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
-import { get, Perm, post, usePaged } from "@micro/shared";
+import { PlusOutlined } from "@ant-design/icons";
+import type { ActionType, ProColumns } from "@ant-design/pro-components";
+import { ProTable } from "@ant-design/pro-components";
+import { get, Perm, post } from "@micro/shared";
 import type { CmdView, DeviceView, DeviceShadowResp, FirmwareView, OtaTaskView } from "@micro/shared/types";
 
 const STATUS_TAG: Record<string, { text: string; color: string }> = {
@@ -47,10 +50,7 @@ function DevicesTab() {
   const [cmdTarget, setCmdTarget] = useState<DeviceView | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [importResult, setImportResult] = useState<{ sn: string; secret: string }[] | null>(null);
-
-  const { list, total, page, size, loading, setPage, setSize, refresh } = usePaged<DeviceView>(
-    (p) => get<{ list: DeviceView[]; total: number }>(`/devices?page=${p.page}&size=${p.size}&keyword=${encodeURIComponent(keyword)}&status=${status}`),
-  );
+  const actionRef = useRef<ActionType | undefined>(undefined);
 
   const openDetail = async (d: DeviceView) => {
     setDetail(d);
@@ -64,42 +64,57 @@ function DevicesTab() {
     setTopology(tp);
   };
 
+  const columns: ProColumns<DeviceView>[] = [
+    { title: "SN", dataIndex: "sn", search: false, render: (_, d) => <a onClick={() => void openDetail(d)}>{d.sn}</a> },
+    { title: "产品", dataIndex: "product_key", search: false },
+    { title: "型号", dataIndex: "model", search: false },
+    { title: "状态", dataIndex: "status", search: false, render: (_, d) => <Tag color={STATUS_TAG[d.status]?.color}>{STATUS_TAG[d.status]?.text ?? d.status}</Tag> },
+    { title: "来源订单", dataIndex: "order_no", search: false, render: (_, d) => d.order_no || "—" },
+    { title: "凭证", dataIndex: "has_secret", search: false, render: (_, d) => (d.has_secret ? <Tag color="green">就绪</Tag> : <Tag>无</Tag>) },
+    {
+      title: "操作",
+      valueType: "option",
+      render: (_, d) => (<Space>
+        <Perm code="asset:device:cmd"><Button size="small" onClick={() => setCmdTarget(d)}>指令</Button></Perm>
+        <Perm code="asset:device:activate">{d.status === "OUT" && <Button size="small" type="link" onClick={async () => {
+          await post(`/devices/${d.device_id}/activate`, {});
+          message.success("已激活（质保起算事件已发）");
+          actionRef.current?.reload();
+        }}>激活</Button>}</Perm>
+        <Perm code="asset:device:transition">{["ACTIVATED", "RETIRED", "IN_STOCK", "OUT"].includes(d.status) && <Button size="small" type="link" danger onClick={async () => {
+          const to = d.status === "ACTIVATED" ? "RETIRED" : "SCRAPPED";
+          await post(`/devices/${d.device_id}/transition`, { to_status: to, reason: "后台人工操作" });
+          message.success(`已迁移至 ${to}`);
+          actionRef.current?.reload();
+        }}>{d.status === "ACTIVATED" ? "退役" : "报废"}</Button>}</Perm>
+      </Space>),
+    },
+  ];
+
   return (<>
-    <Space style={{ marginBottom: 12 }}>
-      <Input.Search placeholder="SN/型号" allowClear style={{ width: 220 }} onSearch={(v) => { setKeyword(v); setPage(1); }} />
-      <Select allowClear placeholder="状态" style={{ width: 130 }} value={status || undefined}
-        onChange={(v) => { setStatus(v ?? ""); setPage(1); }}
-        options={Object.entries(STATUS_TAG).map(([v, t]) => ({ value: v, label: t.text }))} />
-      <Button icon={<ReloadOutlined />} onClick={refresh}>刷新</Button>
-      <Perm code="asset:device:create"><Button type="primary" icon={<PlusOutlined />} onClick={() => setImportOpen(true)}>导入 SN</Button></Perm>
-    </Space>
-    <Table rowKey="device_id" loading={loading} size="small"
-      columns={[
-        { title: "SN", dataIndex: "sn", render: (v: string, d) => <a onClick={() => openDetail(d)}>{v}</a> },
-        { title: "产品", dataIndex: "product_key" },
-        { title: "型号", dataIndex: "model" },
-        { title: "状态", dataIndex: "status", render: (v: string) => <Tag color={STATUS_TAG[v]?.color}>{STATUS_TAG[v]?.text ?? v}</Tag> },
-        { title: "来源订单", dataIndex: "order_no", render: (v: string) => v || "—" },
-        { title: "凭证", dataIndex: "has_secret", render: (v: boolean) => v ? <Tag color="green">就绪</Tag> : <Tag>无</Tag> },
-        {
-          title: "操作", render: (_: unknown, d) => (<Space>
-            <Perm code="asset:device:cmd"><Button size="small" onClick={() => setCmdTarget(d)}>指令</Button></Perm>
-            <Perm code="asset:device:activate">{d.status === "OUT" && <Button size="small" type="link" onClick={async () => {
-              await post(`/devices/${d.device_id}/activate`, {});
-              message.success("已激活（质保起算事件已发）");
-              refresh();
-            }}>激活</Button>}</Perm>
-            <Perm code="asset:device:transition">{["ACTIVATED", "RETIRED", "IN_STOCK", "OUT"].includes(d.status) && <Button size="small" type="link" danger onClick={async () => {
-              const to = d.status === "ACTIVATED" ? "RETIRED" : "SCRAPPED";
-              await post(`/devices/${d.device_id}/transition`, { to_status: to, reason: "后台人工操作" });
-              message.success(`已迁移至 ${to}`);
-              refresh();
-            }}>{d.status === "ACTIVATED" ? "退役" : "报废"}</Button>}</Perm>
-          </Space>),
-        },
+    <ProTable<DeviceView>
+      headerTitle="设备"
+      rowKey="device_id"
+      size="small"
+      actionRef={actionRef}
+      columns={columns}
+      search={false}
+      params={{ keyword, status }}
+      request={async (params) => {
+        const resp = await get<{ list: DeviceView[]; total: number }>(
+          `/devices?page=${params.current ?? 1}&size=${params.pageSize ?? 10}&keyword=${encodeURIComponent(keyword)}&status=${status}`,
+        );
+        return { data: resp.list, total: resp.total, success: true };
+      }}
+      pagination={{ defaultPageSize: 10, showSizeChanger: true }}
+      toolBarRender={() => [
+        <Input.Search key="kw" placeholder="SN/型号" allowClear style={{ width: 220 }} onSearch={(v) => setKeyword(v)} />,
+        <Select key="status" allowClear placeholder="状态" style={{ width: 130 }} value={status || undefined}
+          onChange={(v) => setStatus(v ?? "")}
+          options={Object.entries(STATUS_TAG).map(([v, t]) => ({ value: v, label: t.text }))} />,
+        <Perm key="import" code="asset:device:create"><Button type="primary" icon={<PlusOutlined />} onClick={() => setImportOpen(true)}>导入 SN</Button></Perm>,
       ]}
-      dataSource={list}
-      pagination={{ current: page, pageSize: size, total, onChange: (p, s) => { setPage(p); setSize(s); } }} />
+    />
 
     {/* 详情抽屉：影子卡片 + 拓扑 */}
     <Drawer title={`设备 ${detail?.sn ?? ""}`} width={620} open={!!detail} onClose={() => setDetail(null)}>
@@ -133,9 +148,9 @@ function DevicesTab() {
     </Drawer>
 
     {/* 指令下发弹窗（step-up 由后端 10406 触发全局提级弹窗） */}
-    <CmdModal sn={cmdTarget?.sn ?? ""} onClose={() => { setCmdTarget(null); refresh(); }} open={!!cmdTarget} />
+    <CmdModal sn={cmdTarget?.sn ?? ""} onClose={() => { setCmdTarget(null); actionRef.current?.reload(); }} open={!!cmdTarget} />
 
-    <ImportModal open={importOpen} onClose={() => { setImportOpen(false); refresh(); }} onResult={setImportResult} result={importResult} />
+    <ImportModal open={importOpen} onClose={() => { setImportOpen(false); actionRef.current?.reload(); }} onResult={setImportResult} result={importResult} />
   </>);
 }
 
@@ -204,29 +219,41 @@ function ImportModal({ open, onClose, onResult, result }: {
 function CmdsTab() {
   const [sn, setSn] = useState("");
   const [status, setStatus] = useState("");
-  const { list, total, page, size, loading, setPage, setSize, refresh } = usePaged<CmdView>(
-    (p) => get<{ list: CmdView[]; total: number }>(`/device-cmds?page=${p.page}&size=${p.size}&sn=${encodeURIComponent(sn)}&status=${status}`),
-  );
-  return (<>
-    <Space style={{ marginBottom: 12 }}>
-      <Input.Search placeholder="SN" allowClear style={{ width: 200 }} onSearch={(v) => { setSn(v); setPage(1); }} />
-      <Select allowClear placeholder="状态" style={{ width: 130 }} value={status || undefined} onChange={(v) => { setStatus(v ?? ""); setPage(1); }}
-        options={Object.entries(CMD_STATUS_TAG).map(([v, t]) => ({ value: v, label: t.text }))} />
-      <Button icon={<ReloadOutlined />} onClick={refresh}>刷新</Button>
-    </Space>
-    <Table rowKey="cmd_id" loading={loading} size="small"
-      columns={[
-        { title: "指令 ID", dataIndex: "cmd_id" },
-        { title: "SN", dataIndex: "sn" },
-        { title: "类型", dataIndex: "cmd_type" },
-        { title: "状态", dataIndex: "status", render: (v: string) => <Tag color={CMD_STATUS_TAG[v]?.color}>{CMD_STATUS_TAG[v]?.text ?? v}</Tag> },
-        { title: "重试", dataIndex: "retry_count" },
-        { title: "失败原因", dataIndex: "fail_reason", ellipsis: true, render: (v: string) => v || "—" },
-        { title: "下发时间", dataIndex: "created_at", render: (v: number) => new Date(v).toLocaleString() },
+  const actionRef = useRef<ActionType | undefined>(undefined);
+
+  const columns: ProColumns<CmdView>[] = [
+    { title: "指令 ID", dataIndex: "cmd_id" },
+    { title: "SN", dataIndex: "sn" },
+    { title: "类型", dataIndex: "cmd_type" },
+    { title: "状态", dataIndex: "status", render: (_, r) => <Tag color={CMD_STATUS_TAG[r.status]?.color}>{CMD_STATUS_TAG[r.status]?.text ?? r.status}</Tag> },
+    { title: "重试", dataIndex: "retry_count" },
+    { title: "失败原因", dataIndex: "fail_reason", ellipsis: true, render: (_, r) => r.fail_reason || "—" },
+    { title: "下发时间", dataIndex: "created_at", render: (_, r) => new Date(r.created_at).toLocaleString() },
+  ];
+
+  return (
+    <ProTable<CmdView>
+      headerTitle="指令记录"
+      rowKey="cmd_id"
+      size="small"
+      actionRef={actionRef}
+      columns={columns}
+      search={false}
+      params={{ sn, status }}
+      request={async (params) => {
+        const resp = await get<{ list: CmdView[]; total: number }>(
+          `/device-cmds?page=${params.current ?? 1}&size=${params.pageSize ?? 10}&sn=${encodeURIComponent(sn)}&status=${status}`,
+        );
+        return { data: resp.list, total: resp.total, success: true };
+      }}
+      pagination={{ defaultPageSize: 10, showSizeChanger: true }}
+      toolBarRender={() => [
+        <Input.Search key="sn" placeholder="SN" allowClear style={{ width: 200 }} onSearch={(v) => setSn(v)} />,
+        <Select key="status" allowClear placeholder="状态" style={{ width: 130 }} value={status || undefined} onChange={(v) => setStatus(v ?? "")}
+          options={Object.entries(CMD_STATUS_TAG).map(([v, t]) => ({ value: v, label: t.text }))} />,
       ]}
-      dataSource={list}
-      pagination={{ current: page, pageSize: size, total, onChange: (p, s) => { setPage(p); setSize(s); } }} />
-  </>);
+    />
+  );
 }
 
 // ---- OTA 任务 ----
@@ -245,41 +272,59 @@ function OtaTab() {
   const [status, setStatus] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [detail, setDetail] = useState<OtaTaskView | null>(null);
+  const actionRef = useRef<ActionType | undefined>(undefined);
 
-  const { list, total, page, size, loading, setPage, setSize, refresh } = usePaged<OtaTaskView>(
-    (p) => get<{ list: OtaTaskView[]; total: number }>(`/ota-tasks?page=${p.page}&size=${p.size}&status=${status}`),
-  );
+  const columns: ProColumns<OtaTaskView>[] = [
+    {
+      title: "任务号",
+      dataIndex: "task_no",
+      render: (_, t) => <a onClick={async () => setDetail(await get<OtaTaskView>(`/ota-tasks/${t.task_id}`))}>{t.task_no}</a>,
+    },
+    { title: "名称", dataIndex: "name" },
+    { title: "产品", dataIndex: "product_key" },
+    { title: "状态", dataIndex: "status", render: (_, t) => <Tag color={OTA_STATUS[t.status]?.color}>{OTA_STATUS[t.status]?.text ?? t.status}</Tag> },
+    { title: "进度", render: (_, t) => `${t.success_count}/${t.total}（失败 ${t.fail_count}）` },
+    { title: "失败率阈值", dataIndex: "fail_threshold_pct", render: (_, t) => `${t.fail_threshold_pct}%` },
+    { title: "暂停原因", dataIndex: "fail_reason", ellipsis: true, render: (_, t) => t.fail_reason || "—" },
+    {
+      title: "操作",
+      valueType: "option",
+      render: (_, t) => (
+        <Perm code="asset:ota:rollback">
+          {["RUNNING", "PAUSED", "DONE"].includes(t.status) && <Button size="small" danger onClick={async () => {
+            await post(`/ota-tasks/${t.task_id}/rollback`, { reason: "后台人工回滚" });
+            message.success("已回滚（明细复位，旧固件重推）");
+            actionRef.current?.reload();
+          }}>回滚</Button>}
+        </Perm>
+      ),
+    },
+  ];
 
   return (<>
-    <Space style={{ marginBottom: 12 }}>
-      <Select allowClear placeholder="状态" style={{ width: 130 }} value={status || undefined} onChange={(v) => { setStatus(v ?? ""); setPage(1); }}
-        options={Object.entries(OTA_STATUS).map(([v, t]) => ({ value: v, label: t.text }))} />
-      <Button icon={<ReloadOutlined />} onClick={refresh}>刷新</Button>
-      <Perm code="asset:ota:task"><Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>创建 OTA 任务</Button></Perm>
-    </Space>
-    <Table rowKey="task_id" loading={loading} size="small"
-      columns={[
-        { title: "任务号", dataIndex: "task_no", render: (v: string, t) => <a onClick={async () => setDetail(await get<OtaTaskView>(`/ota-tasks/${t.task_id}`))}>{v}</a> },
-        { title: "名称", dataIndex: "name" },
-        { title: "产品", dataIndex: "product_key" },
-        { title: "状态", dataIndex: "status", render: (v: string) => <Tag color={OTA_STATUS[v]?.color}>{OTA_STATUS[v]?.text ?? v}</Tag> },
-        { title: "进度", render: (_: unknown, t) => `${t.success_count}/${t.total}（失败 ${t.fail_count}）` },
-        { title: "失败率阈值", dataIndex: "fail_threshold_pct", render: (v: number) => `${v}%` },
-        { title: "暂停原因", dataIndex: "fail_reason", ellipsis: true, render: (v: string) => v || "—" },
-        {
-          title: "操作", render: (_: unknown, t) => (<Perm code="asset:ota:rollback">
-            {["RUNNING", "PAUSED", "DONE"].includes(t.status) && <Button size="small" danger onClick={async () => {
-              await post(`/ota-tasks/${t.task_id}/rollback`, { reason: "后台人工回滚" });
-              message.success("已回滚（明细复位，旧固件重推）");
-              refresh();
-            }}>回滚</Button>}
-          </Perm>),
-        },
+    <ProTable<OtaTaskView>
+      headerTitle="OTA 任务"
+      rowKey="task_id"
+      size="small"
+      actionRef={actionRef}
+      columns={columns}
+      search={false}
+      params={{ status }}
+      request={async (params) => {
+        const resp = await get<{ list: OtaTaskView[]; total: number }>(
+          `/ota-tasks?page=${params.current ?? 1}&size=${params.pageSize ?? 10}&status=${status}`,
+        );
+        return { data: resp.list, total: resp.total, success: true };
+      }}
+      pagination={{ defaultPageSize: 10, showSizeChanger: true }}
+      toolBarRender={() => [
+        <Select key="status" allowClear placeholder="状态" style={{ width: 130 }} value={status || undefined} onChange={(v) => setStatus(v ?? "")}
+          options={Object.entries(OTA_STATUS).map(([v, t]) => ({ value: v, label: t.text }))} />,
+        <Perm key="create" code="asset:ota:task"><Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>创建 OTA 任务</Button></Perm>,
       ]}
-      dataSource={list}
-      pagination={{ current: page, pageSize: size, total, onChange: (p, s) => { setPage(p); setSize(s); } }} />
+    />
 
-    <OtaCreateModal open={createOpen} onClose={() => { setCreateOpen(false); refresh(); }} />
+    <OtaCreateModal open={createOpen} onClose={() => { setCreateOpen(false); actionRef.current?.reload(); }} />
 
     <Drawer title={`OTA 任务 ${detail?.task_no ?? ""}`} width={720} open={!!detail} onClose={() => setDetail(null)}>
       {detail && (<>

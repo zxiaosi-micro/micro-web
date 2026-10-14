@@ -1,13 +1,16 @@
 // Parties.tsx · 参与方管理（S4-05）：列表 + 详情（联系人/跟进/员工/经销商扩展）+ 新建/编辑。
-// 约定：ID 一律 string（E8）；usePaged 分页；按钮级权限 <Perm>；操作后 refresh()。
+// 约定：ID 一律 string（E8）；主表走 ProTable request；按钮级权限 <Perm>。
+// 抽屉内子表为非分页小表，保留 antd Table。
 
-import { useMemo, useState } from "react";
+import { useRef, useState } from "react";
 import {
-  App, Button, Descriptions, Drawer, Form, Input, Modal, Select, Space, Table,
+  App, Button, Descriptions, Drawer, Form, Input, Space, Table,
   Tabs, Tag, Typography,
 } from "antd";
-import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
-import { get, Perm, post, put, usePaged } from "@micro/shared";
+import { PlusOutlined } from "@ant-design/icons";
+import type { ActionType, ProColumns } from "@ant-design/pro-components";
+import { ModalForm, ProFormSelect, ProFormText, ProTable } from "@ant-design/pro-components";
+import { get, Perm, post, put } from "@micro/shared";
 import type { ContactItem, CrmRecordItem, DealerExtItem, PartyItem, StaffItem } from "@micro/shared/types";
 
 const PARTY_TYPES = ["CUSTOMER", "DEALER", "SUPPLIER", "ENTERPRISE", "RECYCLER"] as const;
@@ -18,10 +21,7 @@ const STATUS_MAP: Record<number, { text: string; color: string }> = {
 
 export default function PartiesPage() {
   const { message } = App.useApp();
-  const [keyword, setKeyword] = useState("");
-  const { list, total, page, size, loading, setPage, setSize, refresh } = usePaged<PartyItem>(
-    (p) => get<{ list: PartyItem[]; total: number }>(`/parties?page=${p.page}&size=${p.size}&keyword=${encodeURIComponent(keyword)}`),
-  );
+  const actionRef = useRef<ActionType | undefined>(undefined);
 
   const [editing, setEditing] = useState<PartyItem | "new" | null>(null);
   const [form] = Form.useForm();
@@ -58,49 +58,55 @@ export default function PartiesPage() {
     void reloadDetail(id);
   };
 
-  const submit = async () => {
-    const values = await form.validateFields();
-    values.type = values.type ?? [];
-    if (editing === "new") await post("/parties", values);
-    else if (editing) await put(`/parties/${editing.party_id}`, values);
+  const submit = async (values: Record<string, unknown>) => {
+    const payload = { ...values, type: (values.type as string[] | undefined) ?? [] };
+    if (editing === "new") await post("/parties", payload);
+    else if (editing) await put(`/parties/${editing.party_id}`, payload);
     message.success("已保存");
     setEditing(null);
-    refresh();
+    actionRef.current?.reload();
+    return true;
   };
 
-  const submitContact = async () => {
-    if (!detailId) return;
-    const values = await contactForm.validateFields();
+  const submitContact = async (values: Record<string, unknown>) => {
+    if (!detailId) return false;
     await post(`/parties/${detailId}/contacts`, values);
     message.success("已保存");
     setContactOpen(false);
     void reloadDetail(detailId);
+    return true;
   };
 
-  const submitCrm = async () => {
-    if (!detailId) return;
-    const values = await crmForm.validateFields();
+  const submitCrm = async (values: Record<string, unknown>) => {
+    if (!detailId) return false;
     await post(`/parties/${detailId}/crm`, values);
     message.success("已保存");
     setCrmOpen(false);
     void reloadDetail(detailId);
+    return true;
   };
 
-  const columns = useMemo(() => [
-    { title: "名称", dataIndex: "name" },
+  const columns: ProColumns<PartyItem>[] = [
+    { title: "名称", dataIndex: "keyword", hideInTable: true, fieldProps: { placeholder: "名称/信用代码" } },
+    { title: "名称", dataIndex: "name", search: false },
     {
-      title: "类型", dataIndex: "type",
-      render: (v: string[]) => (v ?? []).map((t) => <Tag key={t}>{t}</Tag>),
+      title: "类型",
+      dataIndex: "type",
+      search: false,
+      render: (_, r) => (r.type ?? []).map((t) => <Tag key={t}>{t}</Tag>),
     },
-    { title: "信用代码", dataIndex: "credit_code", render: (v: string) => v || "-" },
-    { title: "区域", dataIndex: "region", render: (v: string) => v || "-" },
+    { title: "信用代码", dataIndex: "credit_code", search: false, render: (_, r) => r.credit_code || "-" },
+    { title: "区域", dataIndex: "region", search: false, render: (_, r) => r.region || "-" },
     {
-      title: "状态", dataIndex: "status",
-      render: (v: number) => <Tag color={STATUS_MAP[v]?.color}>{STATUS_MAP[v]?.text ?? v}</Tag>,
+      title: "状态",
+      dataIndex: "status",
+      search: false,
+      render: (_, r) => <Tag color={STATUS_MAP[r.status]?.color}>{STATUS_MAP[r.status]?.text ?? r.status}</Tag>,
     },
     {
       title: "操作",
-      render: (_: unknown, r: PartyItem) => (
+      valueType: "option",
+      render: (_, r) => (
         <Space>
           <Button size="small" type="link" onClick={() => openDetail(r.party_id)}>详情</Button>
           <Perm code="party:party:update">
@@ -109,44 +115,50 @@ export default function PartiesPage() {
         </Space>
       ),
     },
-  ], [form]);
+  ];
 
   return (
     <>
-      <Typography.Title level={4}>参与方管理</Typography.Title>
-      <Space style={{ marginBottom: 16 }}>
-        <Input.Search onSearch={(v) => { setKeyword(v); setPage(1); }} style={{ width: 240 }} allowClear placeholder="名称/信用代码" />
-        <Perm code="party:party:create">
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing("new"); form.resetFields(); }}>新建参与方</Button>
-        </Perm>
-        <Button icon={<ReloadOutlined />} onClick={refresh}>刷新</Button>
-      </Space>
-      <Table rowKey="party_id" columns={columns} dataSource={list} loading={loading}
-        pagination={{ current: page, pageSize: size, total, showSizeChanger: true, pageSizeOptions: [10, 20, 50, 100], onChange: (p, s) => { setPage(p); setSize(s); } }} />
+      <ProTable<PartyItem>
+        headerTitle="参与方管理"
+        rowKey="party_id"
+        actionRef={actionRef}
+        columns={columns}
+        request={async (params) => {
+          const resp = await get<{ list: PartyItem[]; total: number }>(
+            `/parties?page=${params.current ?? 1}&size=${params.pageSize ?? 10}&keyword=${encodeURIComponent(String(params.keyword ?? ""))}`,
+          );
+          return { data: resp.list, total: resp.total, success: true };
+        }}
+        pagination={{ defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 20, 50, 100] }}
+        toolBarRender={() => [
+          <Perm key="create" code="party:party:create">
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing("new"); form.resetFields(); }}>新建参与方</Button>
+          </Perm>,
+        ]}
+      />
 
-      <Modal title={editing === "new" ? "新建参与方" : "编辑参与方"} open={editing !== null}
-        onOk={() => void submit()} onCancel={() => setEditing(null)} destroyOnHidden>
-        <Form form={form} layout="vertical">
-          <Form.Item name="name" label="名称" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="type" label="类型(可多选)" rules={[{ required: true }]}>
-            <Select mode="multiple" options={PARTY_TYPES.map((t) => ({ value: t, label: t }))} />
-          </Form.Item>
-          <Form.Item name="credit_code" label="统一社会信用代码">
-            <Input />
-          </Form.Item>
-          <Form.Item name="region" label="区域">
-            <Input />
-          </Form.Item>
-          <Form.Item name="address" label="地址">
-            <Input />
-          </Form.Item>
-          <Form.Item name="remark" label="备注">
-            <Input />
-          </Form.Item>
-        </Form>
-      </Modal>
+      <ModalForm
+        title={editing === "new" ? "新建参与方" : "编辑参与方"}
+        open={editing !== null}
+        onOpenChange={(o) => { if (!o) setEditing(null); }}
+        form={form}
+        modalProps={{ destroyOnHidden: true }}
+        onFinish={submit}
+      >
+        <ProFormText name="name" label="名称" rules={[{ required: true }]} />
+        <ProFormSelect
+          name="type"
+          label="类型(可多选)"
+          mode="multiple"
+          options={PARTY_TYPES.map((t) => ({ value: t, label: t }))}
+          rules={[{ required: true }]}
+        />
+        <ProFormText name="credit_code" label="统一社会信用代码" />
+        <ProFormText name="region" label="区域" />
+        <ProFormText name="address" label="地址" />
+        <ProFormText name="remark" label="备注" />
+      </ModalForm>
 
       <Drawer title={detail?.name ?? "参与方详情"} width={720} open={detailId !== null} onClose={() => setDetailId(null)}>
         {detail && (
@@ -203,19 +215,33 @@ export default function PartiesPage() {
             },
           ]} />
         )}
-        <Modal title="新增联系人" open={contactOpen} onCancel={() => setContactOpen(false)} onOk={() => void submitContact()} destroyOnHidden>
-          <Form form={contactForm} layout="vertical">
-            <Form.Item name="name" label="姓名" rules={[{ required: true }]}><Input /></Form.Item>
-            <Form.Item name="mobile" label="手机号" rules={[{ required: true }]}><Input /></Form.Item>
-            <Form.Item name="position" label="职务"><Input /></Form.Item>
-          </Form>
-        </Modal>
-        <Modal title="追加跟进" open={crmOpen} onCancel={() => setCrmOpen(false)} onOk={() => void submitCrm()} destroyOnHidden>
-          <Form form={crmForm} layout="vertical">
-            <Form.Item name="content" label="跟进内容" rules={[{ required: true }]}><Input.TextArea rows={3} /></Form.Item>
-          </Form>
-        </Modal>
       </Drawer>
+
+      <ModalForm
+        title="新增联系人"
+        open={contactOpen}
+        onOpenChange={(o) => setContactOpen(o)}
+        form={contactForm}
+        modalProps={{ destroyOnHidden: true }}
+        onFinish={submitContact}
+      >
+        <ProFormText name="name" label="姓名" rules={[{ required: true }]} />
+        <ProFormText name="mobile" label="手机号" rules={[{ required: true }]} />
+        <ProFormText name="position" label="职务" />
+      </ModalForm>
+
+      <ModalForm
+        title="追加跟进"
+        open={crmOpen}
+        onOpenChange={(o) => setCrmOpen(o)}
+        form={crmForm}
+        modalProps={{ destroyOnHidden: true }}
+        onFinish={submitCrm}
+      >
+        <Form.Item name="content" label="跟进内容" rules={[{ required: true }]}>
+          <Input.TextArea rows={3} />
+        </Form.Item>
+      </ModalForm>
     </>
   );
 }

@@ -1,11 +1,14 @@
 // Stations.tsx · 场站管理（S6-02）：列表/详情/绑定表格/拓扑（React Flow 形状预览）/监控聚合卡片/驻场人员。
+// 主表走 ProTable request；详情抽屉子表（非分页轮询数据）保留 antd Table。
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   App, Button, Card, Col, Descriptions, Drawer, Form, Input, InputNumber, Modal, Row, Select, Space, Statistic, Table, Tag,
 } from "antd";
-import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
-import { get, Perm, post, usePaged } from "@micro/shared";
+import { PlusOutlined } from "@ant-design/icons";
+import type { ActionType, ProColumns } from "@ant-design/pro-components";
+import { ProTable } from "@ant-design/pro-components";
+import { get, Perm, post } from "@micro/shared";
 import type { StationView, StationDeviceView, StationMonitorResp, StationStaffView } from "@micro/shared/types";
 
 const STATUS_TAG: Record<string, { text: string; color: string }> = {
@@ -16,7 +19,6 @@ const STATUS_TAG: Record<string, { text: string; color: string }> = {
 
 export default function StationsPage() {
   const { message } = App.useApp();
-  const [keyword, setKeyword] = useState("");
   const [detail, setDetail] = useState<StationView | null>(null);
   const [devices, setDevices] = useState<StationDeviceView[]>([]);
   const [monitor, setMonitor] = useState<StationMonitorResp | null>(null);
@@ -24,10 +26,7 @@ export default function StationsPage() {
   const [staff, setStaff] = useState<StationStaffView[]>([]);
   const [bindOpen, setBindOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
-
-  const { list, total, page, size, loading, setPage, setSize, refresh } = usePaged<StationView>(
-    (p) => get<{ list: StationView[]; total: number }>(`/stations?page=${p.page}&size=${p.size}&keyword=${encodeURIComponent(keyword)}`),
-  );
+  const actionRef = useRef<ActionType | undefined>(undefined);
 
   // 详情抽屉打开时 10s 轮询监控聚合（usePolling 语义：页面隐藏暂停由 shared 层承担）
   useEffect(() => {
@@ -52,24 +51,37 @@ export default function StationsPage() {
     return () => { alive = false; clearInterval(t); };
   }, [detail]);
 
+  const columns: ProColumns<StationView>[] = [
+    { title: "编号", dataIndex: "keyword", hideInTable: true, fieldProps: { placeholder: "场站编号/名称" } },
+    { title: "编号", dataIndex: "station_no", search: false, render: (_, s) => <a onClick={() => setDetail(s)}>{s.station_no}</a> },
+    { title: "名称", dataIndex: "name", search: false },
+    { title: "类型", dataIndex: "type", search: false, render: (_, s) => <Tag>{s.type}</Tag> },
+    { title: "状态", dataIndex: "status", search: false, render: (_, s) => <Tag color={STATUS_TAG[s.status]?.color}>{STATUS_TAG[s.status]?.text ?? s.status}</Tag> },
+    { title: "地址", dataIndex: "address", search: false, ellipsis: true, render: (_, s) => s.address || "—" },
+    { title: "容量 kWh", dataIndex: "capacity_kwh", search: false, render: (_, s) => (s.capacity_kwh ? s.capacity_kwh.toLocaleString() : "—") },
+    { title: "来源订单", dataIndex: "order_no", search: false, render: (_, s) => s.order_no || "—" },
+  ];
+
   return (<>
-    <Space style={{ marginBottom: 12 }}>
-      <Input.Search placeholder="场站编号/名称" allowClear style={{ width: 220 }} onSearch={(v) => { setKeyword(v); setPage(1); }} />
-      <Button icon={<ReloadOutlined />} onClick={refresh}>刷新</Button>
-      <Perm code="asset:station:create"><Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>建站</Button></Perm>
-    </Space>
-    <Table rowKey="station_id" loading={loading} size="small"
-      columns={[
-        { title: "编号", dataIndex: "station_no", render: (v: string, s) => <a onClick={() => setDetail(s)}>{v}</a> },
-        { title: "名称", dataIndex: "name" },
-        { title: "类型", dataIndex: "type", render: (v: string) => <Tag>{v}</Tag> },
-        { title: "状态", dataIndex: "status", render: (v: string) => <Tag color={STATUS_TAG[v]?.color}>{STATUS_TAG[v]?.text ?? v}</Tag> },
-        { title: "地址", dataIndex: "address", ellipsis: true, render: (v: string) => v || "—" },
-        { title: "容量 kWh", dataIndex: "capacity_kwh", render: (v: number) => (v ? v.toLocaleString() : "—") },
-        { title: "来源订单", dataIndex: "order_no", render: (v: string) => v || "—" },
+    <ProTable<StationView>
+      headerTitle="场站管理"
+      rowKey="station_id"
+      size="small"
+      actionRef={actionRef}
+      columns={columns}
+      request={async (params) => {
+        const resp = await get<{ list: StationView[]; total: number }>(
+          `/stations?page=${params.current ?? 1}&size=${params.pageSize ?? 10}&keyword=${encodeURIComponent(String(params.keyword ?? ""))}`,
+        );
+        return { data: resp.list, total: resp.total, success: true };
+      }}
+      pagination={{ defaultPageSize: 10, showSizeChanger: true }}
+      toolBarRender={() => [
+        <Perm key="create" code="asset:station:create">
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>建站</Button>
+        </Perm>,
       ]}
-      dataSource={list}
-      pagination={{ current: page, pageSize: size, total, onChange: (p, s) => { setPage(p); setSize(s); } }} />
+    />
 
     <Drawer title={`场站 ${detail?.station_no ?? ""}`} width={860} open={!!detail} onClose={() => setDetail(null)}>
       {detail && (<>
@@ -129,7 +141,7 @@ export default function StationsPage() {
     </Drawer>
 
     <BindModal stationId={detail?.station_id ?? ""} open={bindOpen} onClose={async () => { setBindOpen(false); if (detail) setDevices((await get<{ list: StationDeviceView[] }>(`/stations/${detail.station_id}/devices`)).list); }} />
-    <CreateModal open={createOpen} onClose={() => { setCreateOpen(false); refresh(); }} />
+    <CreateModal open={createOpen} onClose={() => { setCreateOpen(false); actionRef.current?.reload(); }} />
   </>);
 }
 

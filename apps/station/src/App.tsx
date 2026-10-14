@@ -1,8 +1,22 @@
-// App.tsx · 场站 Web hash 路由（S7-03：登录/工作台/监控/运维/我的 + 大屏；同 admin 极简路由）。
+// App.tsx · 场站 Web 路由（S7-03：手写 hash 路由 → react-router）。
+// Gate：登录探测/大屏分流；登录后 ProLayout 壳 + 嵌套路由。
+// 大屏免登录独立全屏渲染（不占人工席位，FR-STN-007）。
 
 import { useEffect, useState } from "react";
-import { Spin } from "antd";
-import { fetchMe, logout, tokenStore } from "@micro/shared";
+import { HashRouter, Outlet, Route, Routes, useLocation, useNavigate } from "react-router";
+import { Dropdown, Spin } from "antd";
+import {
+  DashboardOutlined,
+  FundOutlined,
+  LogoutOutlined,
+  MonitorOutlined,
+  ThunderboltOutlined,
+  ToolOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
+import { ProLayout } from "@ant-design/pro-components";
+import { fetchMe } from "@micro/shared";
+import { brandStyle, PageTransition } from "@micro/shared/theme";
 import LoginPage from "./pages/Login";
 import WorkbenchPage from "./pages/Workbench";
 import MonitorPage from "./pages/Monitor";
@@ -10,28 +24,36 @@ import OpsPage from "./pages/Ops";
 import ProfilePage from "./pages/Profile";
 import ScreenPage from "./pages/Screen";
 import { stationWebMe } from "./api";
-import type { StationWebMeResp } from "@micro/shared/types";
+import { useAuthStore } from "./store/auth";
+import { BRAND } from "./brand";
 
-function currentRoute(): string {
-  return window.location.hash.replace(/^#\/?/, "") || "workbench";
-}
-
-/** 驻站上下文（登录后拉取；大屏免登录跳过） */
-export interface StationCtx {
-  me: StationWebMeResp | null;
-}
+/** 静态导航（5 项；大屏进入后为独立全屏页，不再套壳） */
+const NAV = [
+  { path: "/workbench", name: "工作台", icon: <DashboardOutlined /> },
+  { path: "/monitor", name: "监控", icon: <MonitorOutlined /> },
+  { path: "/ops", name: "运维", icon: <ToolOutlined /> },
+  { path: "/profile", name: "我的", icon: <UserOutlined /> },
+  { path: "/screen", name: "大屏", icon: <FundOutlined /> },
+];
 
 export default function App() {
-  const [route, setRoute] = useState(currentRoute());
-  const [authed, setAuthed] = useState(!!tokenStore.getAccessToken());
-  const [ctx, setCtx] = useState<StationCtx>({ me: null });
-  const [checking, setChecking] = useState(authed);
+  return (
+    <HashRouter>
+      <Gate />
+    </HashRouter>
+  );
+}
 
-  useEffect(() => {
-    const onHash = () => setRoute(currentRoute());
-    window.addEventListener("hashchange", onHash);
-    return () => window.removeEventListener("hashchange", onHash);
-  }, []);
+/** 登录门卫：会话探测 + 大屏分流（大屏免登录，不走布局壳） */
+function Gate() {
+  const route = useLocation().pathname.replace(/^\//, "") || "workbench";
+  const authed = useAuthStore((s) => s.authed);
+  const checking = useAuthStore((s) => s.checking);
+  const ctx = useAuthStore((s) => s.ctx);
+  const setAuthed = useAuthStore((s) => s.setAuthed);
+  const setChecking = useAuthStore((s) => s.setChecking);
+  const setCtx = useAuthStore((s) => s.setCtx);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!authed) {
@@ -56,12 +78,11 @@ export default function App() {
         setChecking(false);
       }
     })();
-  }, [authed, route]);
+  }, [authed, route, setAuthed, setChecking, setCtx]);
 
   if (route === "screen") {
     return <ScreenPage />;
   }
-
   if (checking) {
     return (
       <div style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
@@ -69,72 +90,89 @@ export default function App() {
       </div>
     );
   }
-
   if (!authed) {
-    return (
-      <LoginPage
-        onLoggedIn={() => {
-          setAuthed(true);
-          setChecking(true);
-        }}
-      />
-    );
+    return <LoginPage />;
   }
 
-  const nav = (
-    <select
-      value={route}
-      onChange={(e) => (window.location.hash = "#/" + e.target.value)}
-      style={{ padding: 6, borderRadius: 6 }}
-    >
-      <option value="workbench">工作台</option>
-      <option value="monitor">监控</option>
-      <option value="ops">运维</option>
-      <option value="profile">我的</option>
-      <option value="screen">大屏</option>
-    </select>
+  const stationId = ctx.me?.station_id ?? "";
+  return (
+    <Routes>
+      <Route element={<AppShell />}>
+        <Route index element={<WorkbenchPage stationId={stationId} onGoOps={() => navigate("/ops")} />} />
+        <Route path="workbench" element={<WorkbenchPage stationId={stationId} onGoOps={() => navigate("/ops")} />} />
+        <Route path="monitor" element={<MonitorPage stationId={stationId} />} />
+        <Route path="ops" element={<OpsPage stationId={stationId} />} />
+        <Route path="profile" element={<ProfilePage me={ctx.me} />} />
+        <Route path="*" element={<WorkbenchPage stationId={stationId} onGoOps={() => navigate("/ops")} />} />
+      </Route>
+    </Routes>
   );
-
-  const shell = (children: React.ReactNode) => (
-    <div style={{ minHeight: "100vh", background: "#f0f2f5" }}>
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 16,
-          padding: "12px 24px",
-          background: "#fff",
-          borderBottom: "1px solid #eee",
-        }}
-      >
-        <b>场站 Web{ctx.me?.station_name ? ` · ${ctx.me.station_name}` : ""}</b>
-        <div style={{ flex: 1 }} />
-        {nav}
-        <a
-          onClick={() => {
-            void logout();
-            setAuthed(false);
-            window.location.hash = "#/login";
-          }}
-        >
-          退出
-        </a>
-      </header>
-      <div style={{ padding: 16 }}>{children}</div>
-    </div>
-  );
-
-  switch (route) {
-    case "monitor":
-      return shell(<MonitorPage stationId={ctx.me?.station_id ?? ""} />);
-    case "ops":
-      return shell(<OpsPage stationId={ctx.me?.station_id ?? ""} />);
-    case "profile":
-      return shell(<ProfilePage me={ctx.me} />);
-    case "login":
-      return shell(<LoginPage onLoggedIn={() => undefined} />);
-    default:
-      return shell(<WorkbenchPage stationId={ctx.me?.station_id ?? ""} onGoOps={() => (window.location.hash = "#/ops")} />);
-  }
 }
 
+/** 布局壳：ProLayout（移动端自动抽屉）+ 驻站上下文头像 */
+function AppShell() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const ctx = useAuthStore((s) => s.ctx);
+  const signOut = useAuthStore((s) => s.signOut);
+  // 移动端抽屉开合（ProLayout isMobile 时 sider 即抽屉；点菜单后手动收起）
+  const [collapsed, setCollapsed] = useState(() => window.innerWidth < 768);
+
+  return (
+    <div style={{ minHeight: "100vh", ...brandStyle(BRAND) }}>
+      <ProLayout
+        title={ctx.me?.station_name ? `场站运营 · ${ctx.me.station_name}` : "场站运营"}
+        logo={<span className="brand-logo-mark"><ThunderboltOutlined /></span>}
+        layout="mix"
+        fixSiderbar
+        fixedHeader
+        siderWidth={200}
+        collapsed={collapsed}
+        onCollapse={setCollapsed}
+        location={{ pathname: location.pathname }}
+        route={{ path: "/", routes: NAV }}
+        menu={{ locale: false }}
+        menuItemRender={(item, dom) => (
+          <div onClick={() => {
+            if (window.innerWidth < 768) setCollapsed(true);
+            if (item.path) navigate(item.path);
+          }}>{dom}</div>
+        )}
+        avatarProps={{
+          icon: <UserOutlined />,
+          size: "small",
+          title: ctx.me?.station_name || "场站用户",
+          render: (_, dom) => (
+            <Dropdown
+              menu={{
+                items: [{ key: "logout", icon: <LogoutOutlined />, label: "退出登录" }],
+                onClick: ({ key }) => {
+                  if (key === "logout") void signOut();
+                },
+              }}
+            >
+              {dom}
+            </Dropdown>
+          ),
+        }}
+        token={{
+          header: { colorBgHeader: "rgba(255,255,255,0.88)" },
+          sider: {
+            colorMenuBackground: "#180f3d",
+            colorTextMenu: "rgba(255,255,255,0.75)",
+            colorTextMenuSecondary: "rgba(255,255,255,0.55)",
+            colorTextMenuSelected: "#ffffff",
+            colorTextMenuActive: "#ffffff",
+            colorBgMenuItemSelected: BRAND.colorPrimary,
+            colorBgMenuItemHover: "rgba(255,255,255,0.08)",
+            colorBgMenuItemActive: "rgba(255,255,255,0.10)",
+          },
+        }}
+      >
+        <PageTransition routeKey={location.pathname}>
+          <Outlet />
+        </PageTransition>
+      </ProLayout>
+    </div>
+  );
+}

@@ -4,6 +4,7 @@
 // 设备账号凭证，无 token 时自动登录（不占人工席位）；密码不入代码，走 env。
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useEventListener } from "ahooks";
 import { Card, Col, Progress, Row, Tag } from "antd";
 import { login, tokenStore, usePolling } from "@micro/shared";
 import { pendingAlerts, stationMonitor } from "../api";
@@ -24,18 +25,15 @@ export default function ScreenPage() {
     }
   }, [ready]);
 
-  // 4K 等比缩放：1920×1080 设计稿 → 实际窗口 scale
-  useEffect(() => {
-    const fit = () => {
-      const el = scaleRef.current;
-      if (!el) return;
-      const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
-      el.style.transform = `scale(${scale})`;
-    };
-    fit();
-    window.addEventListener("resize", fit);
-    return () => window.removeEventListener("resize", fit);
-  }, []);
+  // 4K 等比缩放：1920×1080 设计稿 → 实际窗口 scale（ahooks useEventListener 托管监听清理）
+  const fit = () => {
+    const el = scaleRef.current;
+    if (!el) return;
+    const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    el.style.transform = `scale(${scale})`;
+  };
+  useEventListener("resize", fit);
+  useEffect(fit, []);
 
   const stationId = useMemo(() => {
     return new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("station_id") ?? "";
@@ -50,33 +48,35 @@ export default function ScreenPage() {
   const d = monitor.data;
 
   return (
-    <div style={{ width: "100vw", height: "100vh", overflow: "hidden", background: "#0a1628" }}>
-      <div ref={scaleRef} style={{ width: 1920, height: 1080, transformOrigin: "top left", padding: 24, color: "#cfe8ff" }}>
-        <h1 style={{ color: "#fff", textAlign: "center", letterSpacing: 4 }}>
+    <div className="screen-root">
+      <div className="screen-scanline" />
+      <div ref={scaleRef} style={{ width: 1920, height: 1080, boxSizing: "border-box", transformOrigin: "top left", padding: 24, color: "#cfe8ff" }}>
+        <h1 className="screen-title">
           {d ? "场站运行大屏" : "场站运行大屏（未配置 station_id）"}
         </h1>
         <Row gutter={24}>
           <Col span={6}>
-            <ScreenCard title="设备总数" value={d?.device_count ?? "-"} />
+            <ScreenCard title="设备总数" value={d?.device_count ?? "-"} delay={0} />
           </Col>
           <Col span={6}>
-            <ScreenCard title="在线设备" value={d?.online_count ?? "-"} />
+            <ScreenCard title="在线设备" value={d?.online_count ?? "-"} delay={80} />
           </Col>
           <Col span={6}>
-            <ScreenCard title="平均 SOC">
+            <ScreenCard title="平均 SOC" delay={160}>
               <Progress type="dashboard" percent={Math.round(d?.avg_soc ?? 0)} size={120} strokeColor="#36cfc9" />
             </ScreenCard>
           </Col>
           <Col span={6}>
-            <ScreenCard title="总功率 kW" value={d?.total_power ?? "-"} />
+            <ScreenCard title="总功率 kW" value={d?.total_power ?? "-"} delay={240} />
           </Col>
         </Row>
         <Card
           title={<span style={{ color: "#cfe8ff" }}>最新告警（10s 轮询）</span>}
-          style={{ marginTop: 24, background: "#112240", border: "1px solid #1e3a5f" }}
+          className="screen-card"
+          style={{ marginTop: 24, animationDelay: "320ms" }}
         >
-          {(alerts.data ?? []).slice(0, 8).map((a) => (
-            <p key={a.alert_id}>
+          {(alerts.data ?? []).slice(0, 8).map((a, i) => (
+            <p key={a.alert_id} className="screen-alert-row" style={{ animationDelay: `${i * 70}ms` }}>
               <Tag color={a.level === "P1" ? "red" : a.level === "P2" ? "orange" : "blue"}>{a.level}</Tag>
               <span>{a.title}</span>
               <span style={{ color: "#5b7ca3", marginLeft: 12 }}>
@@ -96,10 +96,14 @@ export default function ScreenPage() {
   );
 }
 
-function ScreenCard(props: { title: string; value?: string | number; children?: React.ReactNode }) {
+function ScreenCard(props: { title: string; value?: string | number; children?: React.ReactNode; delay?: number }) {
   return (
-    <Card title={<span style={{ color: "#cfe8ff" }}>{props.title}</span>} style={{ background: "#112240", border: "1px solid #1e3a5f", minHeight: 160 }}>
-      {props.children ?? <span style={{ fontSize: 42, color: "#fff" }}>{props.value ?? "-"}</span>}
+    <Card
+      title={<span style={{ color: "#cfe8ff" }}>{props.title}</span>}
+      className="screen-card"
+      style={{ minHeight: 160, animationDelay: `${props.delay ?? 0}ms` }}
+    >
+      {props.children ?? <span className="screen-value">{props.value ?? "-"}</span>}
     </Card>
   );
 }

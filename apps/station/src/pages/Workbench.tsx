@@ -1,8 +1,11 @@
 // Workbench.tsx · 工作台（S7-03）：未读告警/活跃工单计数 + 最新增量列表（10s 轮询）。
+// 视觉：StatCard 数字滚动 + 响应式栅格（手机两列指标）。
 
 import { useState } from "react";
-import { Badge, Button, Card, Col, List, Row, Statistic, Tag } from "antd";
+import { Button, Card, Col, List, Row, Tag } from "antd";
+import { AlertOutlined, FileDoneOutlined } from "@ant-design/icons";
 import { usePolling } from "@micro/shared";
+import { StatCard } from "@micro/shared/theme";
 import { foldPending, pendingAlerts, pendingTickets, type PendingState } from "../api";
 
 export default function WorkbenchPage(props: { stationId: string; onGoOps: () => void }) {
@@ -29,21 +32,27 @@ export default function WorkbenchPage(props: { stationId: string; onGoOps: () =>
 
   return (
     <Row gutter={[16, 16]}>
-      <Col span={6}>
-        <Card>
-          <Badge count={alertState.unread} overflowCount={999}>
-            <Statistic title="未读告警" value={alertState.unread} />
-          </Badge>
-        </Card>
+      <Col xs={12} md={6}>
+        <StatCard
+          title="未读告警"
+          value={alertState.unread}
+          icon={<AlertOutlined />}
+          tone="#fa541c"
+          delayMs={0}
+        />
       </Col>
-      <Col span={6}>
-        <Card>
-          <Statistic title="活跃工单" value={ticketState.unread} />
-        </Card>
+      <Col xs={12} md={6}>
+        <StatCard
+          title="活跃工单"
+          value={ticketState.unread}
+          icon={<FileDoneOutlined />}
+          tone="#6d4df6"
+          delayMs={80}
+        />
       </Col>
-      <Col span={12}>
-        <Card>
-          <Button type="primary" onClick={props.onGoOps}>
+      <Col xs={24} md={12}>
+        <Card className="stat-card" style={{ animationDelay: "160ms" }}>
+          <Button className="btn-brand-grad" type="primary" onClick={props.onGoOps}>
             进入运维处理
           </Button>
           <div style={{ marginTop: 8, color: "#999", fontSize: 12 }}>
@@ -52,7 +61,7 @@ export default function WorkbenchPage(props: { stationId: string; onGoOps: () =>
         </Card>
       </Col>
 
-      <Col span={12}>
+      <Col xs={24} lg={12}>
         <Card title="最新告警" extra={<Button type="link" onClick={alerts.refresh}>刷新</Button>}>
           <List
             size="small"
@@ -68,7 +77,7 @@ export default function WorkbenchPage(props: { stationId: string; onGoOps: () =>
           />
         </Card>
       </Col>
-      <Col span={12}>
+      <Col xs={24} lg={12}>
         <Card title="最新工单" extra={<Button type="link" onClick={tickets.refresh}>刷新</Button>}>
           <List
             size="small"

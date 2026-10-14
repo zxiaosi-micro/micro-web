@@ -7,6 +7,8 @@
   "types": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./theme": "./src/theme.tsx",
+    "./theme.css": "./src/theme.css",
     "./types": "./types/index.ts",
     "./types/*": "./types/*"
   },
@@ -17,6 +19,7 @@
   },
   "devDependencies": {
     "@types/react": "^19.2.6",
+    "antd": "^6.1.4",
     "react": "^19.2.0",
     "typescript": "^5.9.3",
     "oxlint": "^1.24.0"

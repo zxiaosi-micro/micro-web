@@ -1,8 +1,10 @@
-// App.tsx · 极简 hash 路由（S3-04 范围：登录 + 布局 + 五页；多路由框架 S4 演进）。
+// App.tsx · react-router 路由表（原手写 hash 路由 + 三元链 → HashRouter 声明式路由）。
+// 登录态由 store 承担（未登录渲染 LoginPage，不占路由）；产品 Tab 复用页在此以 props 表达。
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { HashRouter, Route, Routes } from "react-router";
 import { Spin } from "antd";
-import { cachedMe, fetchMe } from "@micro/shared";
+import { useAuthStore } from "./store/auth";
 import LoginPage from "./pages/Login";
 import AppLayout from "./layouts/AppLayout";
 import UsersPage from "./pages/Users";
@@ -28,83 +30,70 @@ import BIQueryPage from "./pages/BIQuery";
 import RebatesPage from "./pages/Rebates";
 import DiagPage from "./pages/Diag";
 
-function currentRoute(): string {
-  return window.location.hash.replace(/^#\/?/, "") || "users";
-}
-
 export default function App() {
-  const [route, setRoute] = useState(currentRoute());
-  const [me, setMe] = useState<ReturnType<typeof cachedMe>>(cachedMe());
-  const [checking, setChecking] = useState(true);
+  const me = useAuthStore((s) => s.me);
+  const checking = useAuthStore((s) => s.checking);
+  const bootstrap = useAuthStore((s) => s.bootstrap);
 
   useEffect(() => {
-    const onHash = () => setRoute(currentRoute());
-    window.addEventListener("hashchange", onHash);
-    return () => window.removeEventListener("hashchange", onHash);
-  }, []);
-
-  useEffect(() => {
-    // 启动期会话探测：有 token 则拉 /auth/me 预热
-    void fetchMe().then((m) => {
-      setMe(m);
-      setChecking(false);
-    });
-  }, []);
-
-  if (checking) {
-    return <Spin style={{ display: "grid", placeItems: "center", height: "100vh" }} />;
-  }
-  if (!me) {
-    return <LoginPage onLoggedIn={() => setMe(cachedMe())} />;
-  }
-
-  // S4 业务页面：products 与 station-products 共用商品中心（Tab 默认位不同）；
-  // logs 与 cmd-logs 共用审计中心（同上）。
-  const page =
-    route === "roles" ? <RolesPage /> :
-    route === "orgs" ? <OrgsPage /> :
-    route === "sessions" ? <SessionsPage /> :
-    route === "tenants" ? <TenantsPage /> :
-    route === "parties" ? <PartiesPage /> :
-    route === "opportunities" ? <OpportunitiesPage /> :
-    route === "products" ? <ProductsPage /> :
-    route === "station-products" ? <ProductsPage defaultTab="station" /> :
-    route === "stocks" ? <InventoryPage /> :
-    route === "inbox" ? <MessagesPage /> :
-    route === "logs" ? <AuditsPage /> :
-    route === "cmd-logs" ? <AuditsPage defaultTab="cmd" /> :
-    // S5 交易域（路由末段来自 AppLayout.routeOf：/trade/orders → orders）
-    route === "orders" ? <OrdersPage /> :
-    route === "returns" ? <OrdersPage defaultTab="returns" /> :
-    route === "payments" ? <PaymentsPage /> :
-    route === "refunds" ? <PaymentsPage defaultTab="refunds" /> :
-    route === "invoices" ? <PaymentsPage defaultTab="invoices" /> :
-    route === "reconcile-tasks" ? <PaymentsPage defaultTab="reconcile" /> :
-    // S10-03 经销商返利（/finance/rebates → rebates）
-    route === "rebates" ? <RebatesPage /> :
-    route === "contracts" ? <ContractsPage /> :
-    route === "warranties" ? <ContractsPage defaultTab="warranties" /> :
-    route === "sla" ? <ContractsPage defaultTab="sla" /> :
-    route === "claims" ? <ContractsPage defaultTab="claims" /> :
-    route === "extensions" ? <ContractsPage defaultTab="extensions" /> :
-    route === "devices" ? <DevicesPage /> :
-    route === "ota-tasks" ? <DevicesPage defaultTab="ota" /> :
-    route === "commands" ? <DevicesPage defaultTab="cmds" /> :
-    // S10-01 退役评估（梯次利用 + 回收，路由末段来自 AppLayout.routeOf：/asset/retirements → retirements）
-    route === "retirements" ? <RetirementsPage /> :
-    route === "stations" ? <StationsPage /> :
-    // S8 分析域（路由末段来自 AppLayout.routeOf：/analytics/reports → reports）
-    route === "reports" ? <ReportsPage /> :
-    route === "download-center" ? <DownloadCenterPage /> :
-    // S10-02 BI 自助（/analytics/bi → bi）
-    route === "bi" ? <BIQueryPage /> :
-    // S9 运维 PC 本地诊断（Tauri 探测，浏览器占位拒绝）
-    route === "diag" ? <DiagPage /> :
-    <UsersPage />;
+    void bootstrap();
+  }, [bootstrap]);
 
   return (
-    <AppLayout me={me} route={route} onNavigate={(r) => (window.location.hash = `/${r}`)} onLoggedOut={() => setMe(null)}>
-      {page}
-    </AppLayout>
+    <HashRouter>
+      {checking ? (
+        <Spin style={{ display: "grid", placeItems: "center", height: "100vh" }} />
+      ) : !me ? (
+        <LoginPage />
+      ) : (
+        <Routes>
+          <Route element={<AppLayout />}>
+            <Route index element={<UsersPage />} />
+            <Route path="roles" element={<RolesPage />} />
+            <Route path="orgs" element={<OrgsPage />} />
+            <Route path="sessions" element={<SessionsPage />} />
+            <Route path="tenants" element={<TenantsPage />} />
+            <Route path="parties" element={<PartiesPage />} />
+            <Route path="opportunities" element={<OpportunitiesPage />} />
+            {/* S4 业务页：products 与 station-products 共用商品中心（Tab 默认位不同） */}
+            <Route path="products" element={<ProductsPage />} />
+            <Route path="station-products" element={<ProductsPage defaultTab="station" />} />
+            <Route path="stocks" element={<InventoryPage />} />
+            <Route path="inbox" element={<MessagesPage />} />
+            {/* logs 与 cmd-logs 共用审计中心（同上） */}
+            <Route path="logs" element={<AuditsPage />} />
+            <Route path="cmd-logs" element={<AuditsPage defaultTab="cmd" />} />
+            {/* S5 交易域 */}
+            <Route path="orders" element={<OrdersPage />} />
+            <Route path="returns" element={<OrdersPage defaultTab="returns" />} />
+            <Route path="payments" element={<PaymentsPage />} />
+            <Route path="refunds" element={<PaymentsPage defaultTab="refunds" />} />
+            <Route path="invoices" element={<PaymentsPage defaultTab="invoices" />} />
+            <Route path="reconcile-tasks" element={<PaymentsPage defaultTab="reconcile" />} />
+            {/* S10-03 经销商返利 */}
+            <Route path="rebates" element={<RebatesPage />} />
+            <Route path="contracts" element={<ContractsPage />} />
+            <Route path="warranties" element={<ContractsPage defaultTab="warranties" />} />
+            <Route path="sla" element={<ContractsPage defaultTab="sla" />} />
+            <Route path="claims" element={<ContractsPage defaultTab="claims" />} />
+            <Route path="extensions" element={<ContractsPage defaultTab="extensions" />} />
+            <Route path="devices" element={<DevicesPage />} />
+            <Route path="ota-tasks" element={<DevicesPage defaultTab="ota" />} />
+            <Route path="commands" element={<DevicesPage defaultTab="cmds" />} />
+            {/* S10-01 退役评估 */}
+            <Route path="retirements" element={<RetirementsPage />} />
+            <Route path="stations" element={<StationsPage />} />
+            {/* S8 分析域 */}
+            <Route path="reports" element={<ReportsPage />} />
+            <Route path="download-center" element={<DownloadCenterPage />} />
+            {/* S10-02 BI 自助 */}
+            <Route path="bi" element={<BIQueryPage />} />
+            {/* S9 运维 PC 本地诊断（Tauri 探测，浏览器占位拒绝） */}
+            <Route path="diag" element={<DiagPage />} />
+            <Route path="*" element={<UsersPage />} />
+          </Route>
+        </Routes>
+      )}
+    </HashRouter>
   );
 }

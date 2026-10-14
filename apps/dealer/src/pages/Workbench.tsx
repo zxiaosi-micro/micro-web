@@ -1,9 +1,18 @@
 // Workbench.tsx · 工作台（S9-04）：订单指标卡（/orders 分页拉取统计）+ 信用额度卡（本方 dealer-ext）。
-// 约定：ID string（E8）；统计走 10s 轮询（usePolling）；本方隔离靠服务端 data_scope。
+// 约定：ID string（E8）；统计走轮询（usePolling）；本方隔离靠服务端 data_scope。
+// 视觉：StatCard 数字滚动 + 响应式栅格（手机单列）。
 
-import { Card, Col, Descriptions, Row, Spin, Statistic, Tag, Typography } from "antd";
-import { ShoppingCartOutlined, AppstoreOutlined, ToolOutlined } from "@ant-design/icons";
+import { Card, Col, Descriptions, Row, Spin, Tag, Typography } from "antd";
+import {
+  AccountBookOutlined,
+  AppstoreOutlined,
+  PayCircleOutlined,
+  ShoppingCartOutlined,
+  ToolOutlined,
+  UnorderedListOutlined,
+} from "@ant-design/icons";
 import { usePolling } from "@micro/shared";
+import { StatCard } from "@micro/shared/theme";
 import type { DealerExtItem, PartyItem } from "@micro/shared/types";
 import { fetchSelfDealer, listOrders } from "../api";
 
@@ -60,7 +69,7 @@ function CreditCard(props: {
       title="信用额度 / 档案"
       extra={<Tag color="blue">{ext?.dealer_level || "—"}</Tag>}
     >
-      <Descriptions column={2} size="small" bordered>
+      <Descriptions column={{ xs: 1, sm: 2 }} size="small" bordered>
         <Descriptions.Item label="经销商">{party.name}</Descriptions.Item>
         <Descriptions.Item label="经销商等级">{ext?.dealer_level || "—"}</Descriptions.Item>
         <Descriptions.Item label="授权区域">{ext?.authorized_region || "—"}</Descriptions.Item>
@@ -76,6 +85,12 @@ function CreditCard(props: {
   );
 }
 
+const QUICK_LINKS = [
+  { icon: <ShoppingCartOutlined />, label: "去下单（购物车批量）", route: "order-create" },
+  { icon: <AppstoreOutlined />, label: "商品目录（经销商价 + 可售库存）", route: "catalog" },
+  { icon: <ToolOutlined />, label: "代客服务（SN 质保查询 / 代报修）", route: "service" },
+];
+
 export default function WorkbenchPage() {
   const stats = usePolling<OrderStats>(fetchOrderStats, { intervalMs: 15_000 });
   const self = usePolling<{ party: PartyItem; ext: DealerExtItem | null } | null>(fetchSelfDealer, { intervalMs: 30_000 });
@@ -84,38 +99,50 @@ export default function WorkbenchPage() {
 
   return (
     <Row gutter={[16, 16]}>
-      <Col span={8}>
-        <Card loading={stats.loading && !stats.data}>
-          <Statistic title="我的订单总数" value={stats.data?.total ?? 0} />
-        </Card>
+      <Col xs={24} sm={12} lg={8}>
+        <StatCard
+          title="我的订单总数"
+          value={stats.data?.total ?? 0}
+          icon={<UnorderedListOutlined />}
+          tone="#2f6bff"
+          loading={stats.loading && !stats.data}
+          delayMs={0}
+        />
       </Col>
-      <Col span={8}>
-        <Card loading={stats.loading && !stats.data}>
-          <Statistic title="待支付订单" value={stats.data?.paying ?? 0} valueStyle={{ color: "#faad14" }} />
-        </Card>
+      <Col xs={24} sm={12} lg={8}>
+        <StatCard
+          title="待支付订单"
+          value={stats.data?.paying ?? 0}
+          icon={<PayCircleOutlined />}
+          tone="#fa8c16"
+          loading={stats.loading && !stats.data}
+          delayMs={80}
+        />
       </Col>
-      <Col span={8}>
-        <Card loading={stats.loading && !stats.data}>
-          <Statistic title="已成交额（元）" value={stats.data?.paidAmount ?? "0.00"} precision={2} prefix="¥" />
-        </Card>
+      <Col xs={24} sm={12} lg={8}>
+        <StatCard
+          title="已成交额（元）"
+          value={stats.data?.paidAmount ?? "0.00"}
+          precision={2}
+          prefix="¥"
+          icon={<AccountBookOutlined />}
+          tone="#0f9f8a"
+          loading={stats.loading && !stats.data}
+          delayMs={160}
+        />
       </Col>
 
-      <Col span={16}>
+      <Col xs={24} xl={16}>
         <CreditCard self={self.data} loading={self.loading} />
       </Col>
-      <Col span={8}>
+      <Col xs={24} xl={8}>
         <Card title="快捷入口">
-          <Row gutter={[8, 8]}>
-            <Col span={24}>
-              <ShoppingCartOutlined /> <a onClick={() => go("order-create")}>去下单（购物车批量）</a>
-            </Col>
-            <Col span={24}>
-              <AppstoreOutlined /> <a onClick={() => go("catalog")}>商品目录（经销商价 + 可售库存）</a>
-            </Col>
-            <Col span={24}>
-              <ToolOutlined /> <a onClick={() => go("service")}>代客服务（SN 质保查询 / 代报修）</a>
-            </Col>
-          </Row>
+          {QUICK_LINKS.map((l) => (
+            <div key={l.route} className="quick-link" onClick={() => go(l.route)}>
+              {l.icon}
+              <span>{l.label}</span>
+            </div>
+          ))}
           <Typography.Text type="secondary" style={{ display: "block", marginTop: 12, fontSize: 12 }}>
             指标 15s 轮询、档案 30s 轮询（页面隐藏自动暂停）；订单过滤由服务端 data_scope 承担。
           </Typography.Text>
