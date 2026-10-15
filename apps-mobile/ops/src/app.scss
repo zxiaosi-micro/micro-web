@@ -139,3 +139,87 @@ page {
   font-size: 24px;
   margin-top: 12px;
 }
+
+/* ── 暗色主题扁平类集（themed() 后缀方案：css-to-rn 不支持 CSS 变量/后代选择器，
+ * 页面根 View 挂 `theme-dark` 时以成对类覆盖；页面落地时用 themed("app-card") 取 `app-card app-card--dark`） */
+.theme-dark {
+  background-color: #0d1220;
+}
+
+.app-card--dark {
+  background-color: #161d2f;
+}
+
+.app-title--dark {
+  color: #e5eaf3;
+}
+
+.app-sub--dark {
+  color: #8a94a6;
+}
+
+.app-btn--dark {
+  background-color: #4c8dff;
+}
+
+.app-btn-plain--dark {
+  background-color: #1a2236;
+}
+
+.app-btn-plain-text--dark {
+  color: #7cabff;
+}
+
+.app-btn-danger--dark {
+  background-color: #2a1a1e;
+}
+
+.app-btn-danger-text--dark {
+  color: #ff7875;
+}
+
+.app-input--dark {
+  background-color: #101725;
+  color: #e5eaf3;
+}
+
+.app-textarea--dark {
+  background-color: #101725;
+  color: #e5eaf3;
+}
+
+.app-tag--dark {
+  background-color: #1b2a45;
+}
+
+.app-tag-text--dark {
+  color: #7cabff;
+}
+
+.app-tag-warn--dark {
+  background-color: #2a2216;
+}
+
+.app-tag-warn-text--dark {
+  color: #ffa940;
+}
+
+.app-tag-danger--dark {
+  background-color: #2a1a1e;
+}
+
+.app-tag-danger-text--dark {
+  color: #ff7875;
+}
+
+.app-empty--dark {
+  color: #8a94a6;
+}
+
+.app-error--dark {
+  color: #ff7875;
+}
+
+.app-loading--dark {
+  color: #8a94a6;
+}
