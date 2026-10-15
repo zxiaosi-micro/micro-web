@@ -11,21 +11,23 @@ import {
 import { ProLayout } from "@ant-design/pro-components";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { useState } from "react";
-import { brandStyle, PageTransition } from "@micro/shared/theme";
+import { brandStyle, PageTransition, PrefSwitcher } from "@micro/shared/theme";
+import { usePrefs } from "@micro/shared/prefs";
 import { useAuthStore } from "../store/auth";
 import { BRAND } from "../brand";
 
-/** 静态菜单（6 项，对应 7 页减登录页；key = hash 路由） */
+/** 静态菜单（6 项，对应 7 页减登录页；key = hash 路由；name 为 nav.* 词条 key） */
 const MENU_ITEMS = [
-  { path: "/workbench", name: "工作台" },
-  { path: "/catalog", name: "商品目录" },
-  { path: "/order-create", name: "下单" },
-  { path: "/orders", name: "我的订单" },
-  { path: "/service", name: "代客服务" },
-  { path: "/reconcile", name: "对账" },
+  { path: "/workbench", nameKey: "nav.workbench" },
+  { path: "/catalog", nameKey: "nav.catalog" },
+  { path: "/order-create", nameKey: "nav.order-create" },
+  { path: "/orders", nameKey: "nav.orders" },
+  { path: "/service", nameKey: "nav.service" },
+  { path: "/reconcile", nameKey: "nav.reconcile" },
 ];
 
 export default function DealerLayout() {
+  const { t } = usePrefs();
   const location = useLocation();
   const navigate = useNavigate();
   const me = useAuthStore((s) => s.me)!;
@@ -40,7 +42,7 @@ export default function DealerLayout() {
   return (
     <div style={{ minHeight: "100vh", ...brandStyle(BRAND) }}>
       <ProLayout
-        title="电池全生命周期平台"
+        title={t("app.title")}
         logo={<span className="brand-logo-mark"><ShopOutlined /></span>}
         layout="mix"
         fixSiderbar
@@ -49,8 +51,9 @@ export default function DealerLayout() {
         collapsed={collapsed}
         onCollapse={setCollapsed}
         location={{ pathname: location.pathname }}
-        route={{ path: "/", routes: MENU_ITEMS }}
+        route={{ path: "/", routes: MENU_ITEMS.map((m) => ({ path: m.path, name: t(m.nameKey) })) }}
         menu={{ locale: false }}
+        actionsRender={() => [<PrefSwitcher key="prefs" />]}
         menuItemRender={(item, dom) => (
           <div onClick={() => {
             if (window.innerWidth < 768) setCollapsed(true);
@@ -65,9 +68,9 @@ export default function DealerLayout() {
             <Dropdown
               menu={{
                 items: [
-                  { key: "uid", label: `ID：${me.uid}`, disabled: true },
+                  { key: "uid", label: t("layout.uidLabel", { uid: me.uid }), disabled: true },
                   { type: "divider" as const },
-                  { key: "logout", icon: <LogoutOutlined />, label: "退出登录" },
+                  { key: "logout", icon: <LogoutOutlined />, label: t("common.logout") },
                 ],
                 onClick: ({ key }) => {
                   if (key === "logout") void onLogout();

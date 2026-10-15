@@ -6,6 +6,7 @@ import { Button, Input, Space, Tag, Typography } from "antd";
 import { ShoppingCartOutlined } from "@ant-design/icons";
 import type { ActionType, ProColumns } from "@ant-design/pro-components";
 import { ProTable } from "@ant-design/pro-components";
+import { usePrefs } from "@micro/shared/prefs";
 import type { SkuItem } from "@micro/shared/types";
 import { listInventory, listPrices, listSkus } from "../api";
 
@@ -35,46 +36,47 @@ async function enrichSku(s: SkuItem): Promise<SkuRow> {
 }
 
 export default function CatalogPage() {
+  const { t } = usePrefs();
   const [keyword, setKeyword] = useState("");
   const actionRef = useRef<ActionType | undefined>(undefined);
 
   const columns: ProColumns<SkuRow>[] = [
-    { title: "编码", dataIndex: "code", search: false },
-    { title: "名称", dataIndex: "name", search: false },
-    { title: "类型", dataIndex: "type", search: false, render: (_, r) => <Tag color={r.type === "EXT_WARRANTY" ? "purple" : "blue"}>{r.type}</Tag> },
-    { title: "规格", dataIndex: "spec", search: false, render: (_, r) => r.spec || "—" },
+    { title: t("cat.code"), dataIndex: "code", search: false },
+    { title: t("cat.name"), dataIndex: "name", search: false },
+    { title: t("cat.type"), dataIndex: "type", search: false, render: (_, r) => <Tag color={r.type === "EXT_WARRANTY" ? "purple" : "blue"}>{r.type}</Tag> },
+    { title: t("cat.spec"), dataIndex: "spec", search: false, render: (_, r) => r.spec || "—" },
     {
-      title: "经销商价（元）",
+      title: t("cat.dealerPrice"),
       dataIndex: "dealerPrice",
       search: false,
       render: (_, r) => {
         if (!r.retailPrice && !r.dealerPrice) {
-          return <Typography.Text type="secondary">未设价</Typography.Text>;
+          return <Typography.Text type="secondary">{t("cat.noPrice")}</Typography.Text>;
         }
         return (
           <Space size={4}>
             <Typography.Text strong>¥{r.dealerPrice ?? r.retailPrice}</Typography.Text>
-            {r.dealerPrice ? <Tag color="green">经销商价</Tag> : <Tag>零售价回退</Tag>}
+            {r.dealerPrice ? <Tag color="green">{t("cat.dealerTag")}</Tag> : <Tag>{t("cat.retailTag")}</Tag>}
           </Space>
         );
       },
     },
     {
-      title: "可售库存",
+      title: t("cat.stock"),
       dataIndex: "available",
       search: false,
       render: (_, r) =>
-        r.available > 0 ? <Typography.Text type="warning">{r.available}</Typography.Text> : <Typography.Text type="secondary">无货</Typography.Text>,
+        r.available > 0 ? <Typography.Text type="warning">{r.available}</Typography.Text> : <Typography.Text type="secondary">{t("cat.noStock")}</Typography.Text>,
     },
   ];
 
   return (
     <>
       <Typography.Text type="secondary" style={{ display: "block", marginBottom: 12 }}>
-        经销商价缺省回退零售价（FR-CTL-004）；可售库存为 available 跨仓聚合，仅作参考——下单以服务端预扣为准。
+        {t("cat.hint")}
       </Typography.Text>
       <ProTable<SkuRow>
-        headerTitle="商品目录"
+        headerTitle={t("cat.title")}
         rowKey="sku_id"
         actionRef={actionRef}
         columns={columns}
@@ -91,10 +93,10 @@ export default function CatalogPage() {
             onSearch={(v) => setKeyword(v)}
             style={{ width: 240 }}
             allowClear
-            placeholder="SKU 编码/名称"
+            placeholder={t("cat.searchPlaceholder")}
           />,
           <Button key="go" type="primary" icon={<ShoppingCartOutlined />} onClick={() => (window.location.hash = "#/order-create")}>
-            去下单
+            {t("cat.goOrder")}
           </Button>,
         ]}
       />

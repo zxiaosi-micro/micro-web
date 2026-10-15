@@ -22,17 +22,12 @@ import {
   Typography,
 } from "antd";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import { usePrefs } from "@micro/shared/prefs";
+import { getLocale } from "@micro/shared/prefs";
 import type { InventoryItem, PriceItem, SkuItem } from "@micro/shared/types";
 import { createOrder, listInventory, listPrices, listSkus, payOrder } from "../api";
 
-/** 支付方式（finance 侧三渠道：WECHAT/ALIPAY 现结在线；BANK_OFFLINE 账期线下对公） */
-const PAY_CHANNELS = [
-  { value: "WECHAT", label: "现结 · 微信支付" },
-  { value: "ALIPAY", label: "现结 · 支付宝" },
-  { value: "BANK_OFFLINE", label: "账期 · 对公转账" },
-] as const;
-
-type PayChannel = (typeof PAY_CHANNELS)[number]["value"];
+type PayChannel = "WECHAT" | "ALIPAY" | "BANK_OFFLINE";
 
 /** 购物车行（本地 state；单价 = 经销商价缺省回退零售价，与目录口径一致） */
 interface CartLine {
@@ -54,6 +49,7 @@ interface OrderDone {
 }
 
 export default function OrderCreatePage() {
+  const { t } = usePrefs();
   const { message } = App.useApp();
   const [skus, setSkus] = useState<SkuItem[]>([]);
   const [invBySku, setInvBySku] = useState<Map<string, InventoryItem[]>>(new Map());
@@ -68,6 +64,12 @@ export default function OrderCreatePage() {
 
   // 价格缓存（sku_id → 当前价目表；DEALER 缺省回退 RETAIL）
   const priceCacheRef = useRef<Map<string, PriceItem[]>>(new Map());
+
+  const payChannels: { value: PayChannel; label: string }[] = [
+    { value: "WECHAT", label: t("ord.payWechat") },
+    { value: "ALIPAY", label: t("ord.payAlipay") },
+    { value: "BANK_OFFLINE", label: t("ord.payBank") },
+  ];
 
   useEffect(() => {
     // 购物车数据源：SKU 全量（size=100 dev 量级）+ 库存聚合（warehouse 选择与可售校验）
@@ -102,25 +104,25 @@ export default function OrderCreatePage() {
 
   const addToCart = async () => {
     if (!pickSkuId) {
-      void message.warning("请先选择 SKU");
+      void message.warning(t("mk.needSku"));
       return;
     }
     if (pickQty < 1) {
-      void message.warning("数量至少 1");
+      void message.warning(t("mk.needQty"));
       return;
     }
     // 发货仓：取该 SKU 首个有可售库存的仓（无可售记录则拦截——OrderItemInputApi.warehouse_id 必填）
     const invRows = invBySku.get(pickSkuId) ?? [];
     const warehouse = invRows.find((x) => x.available > 0) ?? invRows[0];
     if (!warehouse) {
-      void message.warning("该 SKU 无库存记录，无法下单");
+      void message.warning(t("mk.noStock"));
       return;
     }
     const prices = await loadPrices(pickSkuId);
     const dealer = prices.find((x) => x.price_type === "DEALER");
     const retail = prices.find((x) => x.price_type === "RETAIL");
     if (!dealer && !retail) {
-      void message.warning("该 SKU 未设价，无法下单");
+      void message.warning(t("mk.noPrice"));
       return;
     }
     const line: CartLine = {
@@ -152,11 +154,11 @@ export default function OrderCreatePage() {
 
   const submit = async () => {
     if (cart.length === 0) {
-      void message.warning("购物车为空");
+      void message.warning(t("mk.emptyCart"));
       return;
     }
     if (cart.some((x) => !x.unitPrice)) {
-      void message.warning("存在未设价 SKU，请移除后再提交");
+      void message.warning(t("mk.hasNoPrice"));
       return;
     }
     setSubmitting(true);
@@ -169,11 +171,11 @@ export default function OrderCreatePage() {
       });
       // 现结：紧跟发起支付（Saga 锁库后进入 PAYING）；账期：生成支付单由财务确认
       if (channel === "BANK_OFFLINE") {
-        message.success(`订单 ${r.order_no} 已创建（账期支付，待财务确认到账）`);
+        message.success(t("mk.createdBill", { no: r.order_no }));
         setDone({ orderNo: r.order_no, totalAmount: r.total_amount, payExpireAt: r.pay_expire_at, channel, paymentNo: "" });
       } else {
         const pay = await payOrder(r.order_no, channel);
-        message.success(`订单 ${r.order_no} 已创建，支付单 ${pay.payment_no} 已发起`);
+        message.success(t("mk.createdPaid", { no: r.order_no, pay: pay.payment_no }));
         setDone({ orderNo: r.order_no, totalAmount: r.total_amount, payExpireAt: r.pay_expire_at, channel, paymentNo: pay.payment_no });
       }
       setCart([]);
@@ -185,9 +187,9 @@ export default function OrderCreatePage() {
 
   const cartColumns = [
     { title: "SKU", dataIndex: "sku_id", render: (v: string, r: CartLine) => `${r.sku_name}（${v}）` },
-    { title: "发货仓", dataIndex: "warehouse_id" },
+    { title: t("mk.warehouse"), dataIndex: "warehouse_id" },
     {
-      title: "数量",
+      title: t("mk.qty"),
       dataIndex: "qty",
       render: (v: number, r: CartLine, i: number) => (
         <InputNumber
@@ -200,28 +202,28 @@ export default function OrderCreatePage() {
       ),
     },
     {
-      title: "单价（元）",
+      title: t("mk.unitPrice"),
       dataIndex: "unitPrice",
       render: (v: string | null, r: CartLine) =>
         v ? (
           <Space size={4}>
             <span>¥{v}</span>
-            {r.priceSource === "DEALER" ? <Tag color="green">经销商价</Tag> : <Tag>零售价回退</Tag>}
+            {r.priceSource === "DEALER" ? <Tag color="green">{t("cat.dealerTag")}</Tag> : <Tag>{t("cat.retailTag")}</Tag>}
           </Space>
         ) : (
-          <Tag color="red">未设价</Tag>
+          <Tag color="red">{t("cat.noPrice")}</Tag>
         ),
     },
     {
-      title: "小计（元）",
+      title: t("mk.subtotal"),
       render: (_: unknown, r: CartLine) => (r.unitPrice ? `¥${(Number(r.unitPrice) * r.qty).toFixed(2)}` : "—"),
     },
     {
-      title: "操作",
+      title: t("common.actions"),
       render: (_: unknown, _r: CartLine, i: number) => (
         <Button size="small" type="link" danger icon={<DeleteOutlined />}
           onClick={() => setCart((prev) => prev.filter((_, idx) => idx !== i))}>
-          移除
+          {t("mk.remove")}
         </Button>
       ),
     },
@@ -229,50 +231,50 @@ export default function OrderCreatePage() {
 
   return (
     <>
-      <Typography.Title level={4}>下单</Typography.Title>
+      <Typography.Title level={4}>{t("mk.title")}</Typography.Title>
       <Row gutter={[16, 16]}>
         <Col span={16}>
-          <Card title="购物车" extra={
+          <Card title={t("mk.cart")} extra={
             <Space.Compact>
               <Select
                 showSearch
                 style={{ width: 280 }}
-                placeholder="选择 SKU（编码/名称）"
+                placeholder={t("mk.pickSku")}
                 value={pickSkuId ?? undefined}
                 optionFilterProp="label"
                 onChange={(v) => setPickSkuId(v)}
                 options={skus.map((s) => ({ value: s.sku_id, label: `${s.code} ${s.name}` }))}
               />
               <InputNumber min={1} value={pickQty} onChange={(n) => setPickQty(Math.max(1, n ?? 1))} />
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => void addToCart()}>添加</Button>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => void addToCart()}>{t("mk.add")}</Button>
             </Space.Compact>
           }>
             <Table rowKey={(r: CartLine) => `${r.sku_id}-${r.warehouse_id}`} size="small" pagination={false}
-              columns={cartColumns} dataSource={cart} locale={{ emptyText: "购物车为空，从右上角添加 SKU" }} />
+              columns={cartColumns} dataSource={cart} locale={{ emptyText: t("mk.cartEmpty") }} />
             <div style={{ marginTop: 12, textAlign: "right" }}>
-              <Typography.Text strong style={{ fontSize: 16 }}>合计：¥{totalAmount}</Typography.Text>
+              <Typography.Text strong style={{ fontSize: 16 }}>{t("mk.total", { amount: totalAmount })}</Typography.Text>
             </div>
           </Card>
         </Col>
         <Col span={8}>
-          <Card title="支付方式">
+          <Card title={t("mk.payTitle")}>
             <Radio.Group value={channel} onChange={(e) => setChannel(e.target.value as PayChannel)}>
               <Space direction="vertical">
-                {PAY_CHANNELS.map((c) => (
+                {payChannels.map((c) => (
                   <Radio key={c.value} value={c.value}>{c.label}</Radio>
                 ))}
               </Space>
             </Radio.Group>
             {channel === "BANK_OFFLINE" && (
               <Typography.Text type="secondary" style={{ display: "block", marginTop: 8, fontSize: 12 }}>
-                账期为线下对公打款：支付单生成后由财务确认到账（BANK_OFFLINE 双人复核）。
+                {t("mk.bankHint")}
               </Typography.Text>
             )}
           </Card>
-          <Card title="订单选项" style={{ marginTop: 16 }}>
+          <Card title={t("mk.optionsTitle")} style={{ marginTop: 16 }}>
             <Space direction="vertical" style={{ width: "100%" }}>
               <Space>
-                <span>场站单</span>
+                <span>{t("mk.stationOrder")}</span>
                 <Switch checked={stationOrder} onChange={setStationOrder} />
                 {stationOrder && <Tag color="purple">type=STATION</Tag>}
               </Space>
@@ -280,18 +282,18 @@ export default function OrderCreatePage() {
                 <Alert
                   type="info"
                   showIcon
-                  message="场站单需选择场站模板展开 BOM 出库"
-                  description="占位：场站模板选择待后端端点（L2），当前直接按购物车明细创建 STATION 订单。"
+                  message={t("mk.stationAlert")}
+                  description={t("mk.stationAlertDesc")}
                 />
               )}
               <Input.TextArea
                 rows={2}
                 value={remark}
                 onChange={(e) => setRemark(e.target.value)}
-                placeholder="订单备注（选填）"
+                placeholder={t("mk.remarkPlaceholder")}
               />
               <Button type="primary" block loading={submitting} disabled={cart.length === 0} onClick={() => void submit()}>
-                提交下单（¥{totalAmount}）
+                {t("mk.submit", { amount: totalAmount })}
               </Button>
             </Space>
           </Card>
@@ -299,29 +301,31 @@ export default function OrderCreatePage() {
       </Row>
 
       <Modal
-        title="下单结果"
+        title={t("mk.doneTitle")}
         open={!!done}
+        okText={t("common.confirm")}
+        cancelText={t("common.cancel")}
         footer={[
-          <Button key="stay" onClick={() => setDone(null)}>继续下单</Button>,
+          <Button key="stay" onClick={() => setDone(null)}>{t("mk.continue")}</Button>,
           <Button key="orders" type="primary" onClick={() => {
             setDone(null);
             window.location.hash = "#/orders";
-          }}>去我的订单</Button>,
+          }}>{t("mk.goOrders")}</Button>,
         ]}
         onCancel={() => setDone(null)}
       >
         {done && (
           <Descriptions column={1} size="small" bordered>
-            <Descriptions.Item label="订单号">{done.orderNo}</Descriptions.Item>
-            <Descriptions.Item label="总额">¥{done.totalAmount}</Descriptions.Item>
-            <Descriptions.Item label="支付截止">
-              {done.payExpireAt ? new Date(done.payExpireAt).toLocaleString("zh-CN") : "—"}
+            <Descriptions.Item label={t("mk.orderNo")}>{done.orderNo}</Descriptions.Item>
+            <Descriptions.Item label={t("mk.totalLabel")}>¥{done.totalAmount}</Descriptions.Item>
+            <Descriptions.Item label={t("mk.payDeadline")}>
+              {done.payExpireAt ? new Date(done.payExpireAt).toLocaleString(getLocale()) : "—"}
             </Descriptions.Item>
-            <Descriptions.Item label="支付方式">
-              {PAY_CHANNELS.find((c) => c.value === done.channel)?.label ?? done.channel}
+            <Descriptions.Item label={t("mk.payMethod")}>
+              {payChannels.find((c) => c.value === done.channel)?.label ?? done.channel}
             </Descriptions.Item>
-            <Descriptions.Item label="支付单">
-              {done.paymentNo || "账期线下打款，待财务确认（占位说明）"}
+            <Descriptions.Item label={t("mk.paymentLabel")}>
+              {done.paymentNo || t("mk.paymentBankNote")}
             </Descriptions.Item>
           </Descriptions>
         )}
