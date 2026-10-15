@@ -903,9 +903,12 @@ const en = {
   "diag.tauriHint": "Capabilities below invoke local hardware via Rust; the CAN box (SLCAN) and JBD-over-BLE passthrough await on-device calibration per ADR-19; invoke returns a stub refusal until then.",
   "diag.serial": "Serial Diagnostics",
   "diag.serialScan": "Serial Scan",
+  "diag.serialScanDesc": "list_serial_ports (CH340/CP210x USB bridges)",
   "diag.canBox": "CAN Box",
+  "diag.canBoxDesc": "diag_slcan_read (SLCAN skeleton, enabled after on-device calibration)",
   "diag.flash": "Firmware Flash",
   "diag.export": "Export & Pack",
+  "diag.exportDesc": "export_csv / export_xlsx / pack_logs (local $DOWNLOAD/$TEMP)",
   "diag.footnote": "Panels open progressively with on-device calibration (ADR-19: protocol spec + simulator as acceptance); verify firmware sha256 and device SN before flashing; progress events render live in the flash dialog.",
 };
 

@@ -46,13 +46,13 @@ export default function DiagPage() {
         <Descriptions.Item label={t("diag.serial")}>
           diag_serial_basic_info（JBD 寄存器 0x03：电压/电流/SOC/温度/电芯电压）
         </Descriptions.Item>
-        <Descriptions.Item label={t("diag.serialScan")}>list_serial_ports（CH340/CP210x 等 USB 桥）</Descriptions.Item>
-        <Descriptions.Item label={t("diag.canBox")}>diag_slcan_read（SLCAN 骨架，实机校准后启用）</Descriptions.Item>
+        <Descriptions.Item label={t("diag.serialScan")}>{t("diag.serialScanDesc")}</Descriptions.Item>
+        <Descriptions.Item label={t("diag.canBox")}>{t("diag.canBoxDesc")}</Descriptions.Item>
         <Descriptions.Item label="BLE">diag_ble_scan / diag_ble_basic_info（btleplug）</Descriptions.Item>
         <Descriptions.Item label={t("diag.flash")}>
           firmware_sha256 → flash_xmodem_1k（XMODEM-1K + 断点续传 + 进度事件 flash://progress）
         </Descriptions.Item>
-        <Descriptions.Item label={t("diag.export")}>export_csv / export_xlsx / pack_logs（本地 $DOWNLOAD/$TEMP）</Descriptions.Item>
+        <Descriptions.Item label={t("diag.export")}>{t("diag.exportDesc")}</Descriptions.Item>
       </Descriptions>
       <Typography.Paragraph style={{ marginTop: 16 }}>
         {t("diag.footnote")}

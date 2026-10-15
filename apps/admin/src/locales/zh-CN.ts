@@ -902,9 +902,12 @@ const zh = {
   "diag.tauriHint": "以下能力经 Rust invoke 调用本地硬件；CAN 盒（SLCAN）与 JBD-over-BLE 透传按 ADR-19 待实机校准，校准前 invoke 返回占位拒绝。",
   "diag.serial": "串口诊断",
   "diag.serialScan": "串口扫描",
+  "diag.serialScanDesc": "list_serial_ports（CH340/CP210x 等 USB 桥）",
   "diag.canBox": "CAN 盒",
+  "diag.canBoxDesc": "diag_slcan_read（SLCAN 骨架，实机校准后启用）",
   "diag.flash": "固件烧录",
   "diag.export": "导出打包",
+  "diag.exportDesc": "export_csv / export_xlsx / pack_logs（本地 $DOWNLOAD/$TEMP）",
   "diag.footnote": "功能面板随实机校准逐步开放（ADR-19：协议标准 + 模拟器为验收口径）；烧录操作请先核对固件 sha256 与设备 SN，进度事件实时展示于烧录弹窗。",
 };
 
