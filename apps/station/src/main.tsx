@@ -1,13 +1,18 @@
-// main.tsx · 场站 Web 入口：安装请求层（10402/10406 全局分流）→ 挂 App。
+// main.tsx · 场站 Web 入口：安装请求层（10402/10406 全局分流）→ 装配偏好中心（语言/主题）→ 挂 App。
 
 import { App as AntApp, ConfigProvider, Modal } from "antd";
+import enUS from "antd/locale/en_US";
 import zhCN from "antd/locale/zh_CN";
+import type { ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { logout, setupAuth } from "@micro/shared";
-import { brandTheme } from "@micro/shared/theme";
+import { applyHtmlPrefs, brandTheme, useDocumentTitle } from "@micro/shared/theme";
+import { configureI18n, t, usePrefs, webStorage } from "@micro/shared/prefs";
 import "@micro/shared/theme.css";
 import { BRAND } from "./brand";
 import App from "./App";
+import enMessages from "./locales/en-US";
+import zhMessages from "./locales/zh-CN";
 
 let kickedShown = false;
 
@@ -20,9 +25,9 @@ setupAuth({
     }
     kickedShown = true;
     Modal.warning({
-      title: "账号在其他设备登录",
-      content: "当前会话已被顶下线,请重新登录。",
-      okText: "重新登录",
+      title: t("session.kickedTitle"),
+      content: t("session.kickedContent"),
+      okText: t("session.relogin"),
       onOk: () => {
         kickedShown = false;
         window.location.reload();
@@ -30,7 +35,7 @@ setupAuth({
     });
   },
   onStepUpRequired: () => {
-    // 10406 提级：App 内全局 StepUpModal 监听（见 AppLayout）
+    // 10406 提级：App 内全局 StepUpModal 监听（见 App）
     window.dispatchEvent(new CustomEvent("micro:stepup-required"));
   },
   onForceLogout: () => {
@@ -43,10 +48,27 @@ setupAuth({
   },
 });
 
+configureI18n({
+  storage: webStorage,
+  messages: { "zh-CN": zhMessages, "en-US": enMessages },
+  detect: () => (typeof navigator !== "undefined" ? navigator.language : null),
+  onChange: applyHtmlPrefs,
+});
+applyHtmlPrefs();
+
+/** 动态 locale/theme 的根 Provider（usePrefs 订阅切换即时重渲；title 随语言同步） */
+function RootProviders({ children }: { children: ReactNode }) {
+  const { locale, theme } = usePrefs();
+  useDocumentTitle(t("app.title"));
+  return (
+    <ConfigProvider locale={locale === "en-US" ? enUS : zhCN} theme={brandTheme(BRAND, theme)}>
+      <AntApp>{children}</AntApp>
+    </ConfigProvider>
+  );
+}
+
 createRoot(document.getElementById("root")!).render(
-  <ConfigProvider locale={zhCN} theme={brandTheme(BRAND)}>
-    <AntApp>
-      <App />
-    </AntApp>
-  </ConfigProvider>,
+  <RootProviders>
+    <App />
+  </RootProviders>,
 );

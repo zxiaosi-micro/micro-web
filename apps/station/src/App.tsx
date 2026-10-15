@@ -16,7 +16,8 @@ import {
 } from "@ant-design/icons";
 import { ProLayout } from "@ant-design/pro-components";
 import { fetchMe } from "@micro/shared";
-import { brandStyle, PageTransition } from "@micro/shared/theme";
+import { brandStyle, PageTransition, PrefSwitcher } from "@micro/shared/theme";
+import { usePrefs } from "@micro/shared/prefs";
 import LoginPage from "./pages/Login";
 import WorkbenchPage from "./pages/Workbench";
 import MonitorPage from "./pages/Monitor";
@@ -27,13 +28,13 @@ import { stationWebMe } from "./api";
 import { useAuthStore } from "./store/auth";
 import { BRAND } from "./brand";
 
-/** 静态导航（5 项；大屏进入后为独立全屏页，不再套壳） */
+/** 静态导航（5 项；大屏进入后为独立全屏页，不再套壳；nameKey 渲染期翻译） */
 const NAV = [
-  { path: "/workbench", name: "工作台", icon: <DashboardOutlined /> },
-  { path: "/monitor", name: "监控", icon: <MonitorOutlined /> },
-  { path: "/ops", name: "运维", icon: <ToolOutlined /> },
-  { path: "/profile", name: "我的", icon: <UserOutlined /> },
-  { path: "/screen", name: "大屏", icon: <FundOutlined /> },
+  { path: "/workbench", nameKey: "nav.workbench", icon: <DashboardOutlined /> },
+  { path: "/monitor", nameKey: "nav.monitor", icon: <MonitorOutlined /> },
+  { path: "/ops", nameKey: "nav.ops", icon: <ToolOutlined /> },
+  { path: "/profile", nameKey: "nav.profile", icon: <UserOutlined /> },
+  { path: "/screen", nameKey: "nav.screen", icon: <FundOutlined /> },
 ];
 
 export default function App() {
@@ -109,8 +110,9 @@ function Gate() {
   );
 }
 
-/** 布局壳：ProLayout（移动端自动抽屉）+ 驻站上下文头像 */
+/** 布局壳：ProLayout（移动端自动抽屉）+ 驻站上下文头像 + 偏好切换器 */
 function AppShell() {
+  const { t } = usePrefs();
   const location = useLocation();
   const navigate = useNavigate();
   const ctx = useAuthStore((s) => s.ctx);
@@ -121,7 +123,7 @@ function AppShell() {
   return (
     <div style={{ minHeight: "100vh", ...brandStyle(BRAND) }}>
       <ProLayout
-        title={ctx.me?.station_name ? `场站运营 · ${ctx.me.station_name}` : "场站运营"}
+        title={ctx.me?.station_name ? t("shell.titleWithStation", { name: ctx.me.station_name }) : t("shell.title")}
         logo={<span className="brand-logo-mark"><ThunderboltOutlined /></span>}
         layout="mix"
         fixSiderbar
@@ -130,8 +132,9 @@ function AppShell() {
         collapsed={collapsed}
         onCollapse={setCollapsed}
         location={{ pathname: location.pathname }}
-        route={{ path: "/", routes: NAV }}
+        route={{ path: "/", routes: NAV.map((n) => ({ path: n.path, name: t(n.nameKey), icon: n.icon })) }}
         menu={{ locale: false }}
+        actionsRender={() => [<PrefSwitcher key="prefs" />]}
         menuItemRender={(item, dom) => (
           <div onClick={() => {
             if (window.innerWidth < 768) setCollapsed(true);
@@ -141,11 +144,11 @@ function AppShell() {
         avatarProps={{
           icon: <UserOutlined />,
           size: "small",
-          title: ctx.me?.station_name || "场站用户",
+          title: ctx.me?.station_name || t("shell.stationUser"),
           render: (_, dom) => (
             <Dropdown
               menu={{
-                items: [{ key: "logout", icon: <LogoutOutlined />, label: "退出登录" }],
+                items: [{ key: "logout", icon: <LogoutOutlined />, label: t("common.logout") }],
                 onClick: ({ key }) => {
                   if (key === "logout") void signOut();
                 },

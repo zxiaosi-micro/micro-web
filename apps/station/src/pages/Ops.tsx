@@ -17,6 +17,7 @@ import {
   Tag,
 } from "antd";
 import { post, usePolling } from "@micro/shared";
+import { enumLabel, getLocale, usePrefs } from "@micro/shared/prefs";
 import type { AlertView, InspectionTaskView, TicketView } from "@micro/shared/types";
 import {
   ackAlert,
@@ -36,12 +37,13 @@ import {
 } from "../api";
 
 export default function OpsPage(props: { stationId: string }) {
+  const { t } = usePrefs();
   return (
     <Tabs
       items={[
-        { key: "alerts", label: "告警", children: <AlertsTab stationId={props.stationId} /> },
-        { key: "tickets", label: "工单", children: <TicketsTab stationId={props.stationId} /> },
-        { key: "inspection", label: "巡检", children: <InspectionTab stationId={props.stationId} /> },
+        { key: "alerts", label: t("ops.tabAlerts"), children: <AlertsTab stationId={props.stationId} /> },
+        { key: "tickets", label: t("ops.tabTickets"), children: <TicketsTab stationId={props.stationId} /> },
+        { key: "inspection", label: t("ops.tabInspection"), children: <InspectionTab stationId={props.stationId} /> },
       ]}
     />
   );
@@ -50,40 +52,41 @@ export default function OpsPage(props: { stationId: string }) {
 // ---------- 告警 ----------
 
 function AlertsTab(props: { stationId: string }) {
+  const { t } = usePrefs();
   const [status, setStatus] = useState<string>("OPEN");
   const alerts = usePolling(() => listAlerts(props.stationId, status || undefined));
   const [transferOpen, setTransferOpen] = useState<AlertView | null>(null);
   const [closeOpen, setCloseOpen] = useState<AlertView | null>(null);
 
   const columns = [
-    { title: "级别", dataIndex: "level", render: (v: string) => <Tag color={v === "P1" ? "red" : v === "P2" ? "orange" : "blue"}>{v}</Tag> },
-    { title: "标题", dataIndex: "title" },
-    { title: "来源", dataIndex: "source", width: 120 },
-    { title: "聚合", dataIndex: "aggregate_count", width: 70 },
-    { title: "状态", dataIndex: "status", width: 90 },
-    { title: "首次", dataIndex: "first_seen_at", render: (v: number) => (v ? new Date(v).toLocaleString() : "-") },
+    { title: t("ops.level"), dataIndex: "level", render: (v: string) => <Tag color={v === "P1" ? "red" : v === "P2" ? "orange" : "blue"}>{v}</Tag> },
+    { title: t("ops.titleCol"), dataIndex: "title" },
+    { title: t("ops.source"), dataIndex: "source", width: 120 },
+    { title: t("ops.aggregate"), dataIndex: "aggregate_count", width: 70 },
+    { title: t("common.status"), dataIndex: "status", width: 90 },
+    { title: t("ops.firstSeen"), dataIndex: "first_seen_at", render: (v: number) => (v ? new Date(v).toLocaleString(getLocale()) : "-") },
     {
-      title: "操作",
+      title: t("common.actions"),
       render: (_: unknown, a: AlertView) => (
         <>
           {a.status === "OPEN" && (
             <Button size="small" onClick={async () => { await ackAlert(a.alert_id); void alerts.refresh(); }}>
-              确认
+              {t("ops.ack")}
             </Button>
           )}{" "}
           {(a.status === "OPEN" || a.status === "ACKED") && (
             <>
               <Button size="small" type="primary" onClick={() => setTransferOpen(a)}>
-                转工单
+                {t("ops.toTicket")}
               </Button>{" "}
               <Button size="small" onClick={() => setCloseOpen(a)}>
-                关闭
+                {t("ops.close")}
               </Button>
             </>
           )}
           {a.status === "CLOSED" && (
             <Button size="small" onClick={async () => { await post(`/alerts/${a.alert_id}/archive`, {}); void alerts.refresh(); }}>
-              归档
+              {t("ops.archive")}
             </Button>
           )}
         </>
@@ -94,10 +97,10 @@ function AlertsTab(props: { stationId: string }) {
   return (
     <>
       <Select value={status} onChange={setStatus} style={{ width: 140, marginBottom: 12 }}>
-        <Select.Option value="OPEN">未确认</Select.Option>
-        <Select.Option value="ACKED">已确认</Select.Option>
-        <Select.Option value="CLOSED">已关闭</Select.Option>
-        <Select.Option value="">全部</Select.Option>
+        <Select.Option value="OPEN">{t("ops.stOpen")}</Select.Option>
+        <Select.Option value="ACKED">{t("ops.stAcked")}</Select.Option>
+        <Select.Option value="CLOSED">{t("ops.stClosed")}</Select.Option>
+        <Select.Option value="">{t("common.all")}</Select.Option>
       </Select>
       <Table<AlertView>
         rowKey="alert_id"
@@ -109,50 +112,55 @@ function AlertsTab(props: { stationId: string }) {
       />
       <TransferModal alert={transferOpen} stationId={props.stationId} onClose={() => setTransferOpen(null)} onDone={() => void alerts.refresh()} />
       <Modal
-        title="人工关闭告警"
+        title={t("ops.closeTitle")}
         open={!!closeOpen}
+        okText={t("common.confirm")}
+        cancelText={t("common.cancel")}
         onCancel={() => setCloseOpen(null)}
         onOk={async () => {
           if (!closeOpen) return;
-          await closeAlert(closeOpen.alert_id, "人工确认无需处理");
-          message.success("已关闭");
+          await closeAlert(closeOpen.alert_id, t("ops.closeReason"));
+          message.success(t("ops.closed"));
           setCloseOpen(null);
           void alerts.refresh();
         }}
       >
-        关闭前须填写人工原因（无关联工单时）。
+        {t("ops.closeHint")}
       </Modal>
     </>
   );
 }
 
 function TransferModal(props: { alert: AlertView | null; stationId: string; onClose: () => void; onDone: () => void }) {
+  const { t } = usePrefs();
   const [auto, setAuto] = useState(true);
   return (
     <Modal
-      title="告警转工单"
+      title={t("ops.transferTitle")}
       open={!!props.alert}
+      okText={t("common.confirm")}
+      cancelText={t("common.cancel")}
       onCancel={props.onClose}
       footer={[
-        <Button key="cancel" onClick={props.onClose}>取消</Button>,
+        <Button key="cancel" onClick={props.onClose}>{t("common.cancel")}</Button>,
         <Button
           key="ok"
           type="primary"
           onClick={async () => {
             if (!props.alert) return;
             const out = await transferAlert(props.alert.alert_id, auto);
-            message.success(`已生成工单 ${out.ticket_no}${auto ? "并自动派单" : ""}`);
+            message.success(auto ? t("ops.generatedAuto", { no: out.ticket_no }) : t("ops.generated", { no: out.ticket_no }));
             props.onClose();
             props.onDone();
           }}
         >
-          生成{auto ? "（自动派单）" : ""}
+          {auto ? t("ops.generateAuto") : t("ops.generate")}
         </Button>,
       ]}
     >
       <p>{props.alert?.title}</p>
       <label>
-        <input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} /> 建单后自动派单（区域+技能匹配）
+        <input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} /> {t("ops.autoDispatch")}
       </label>
     </Modal>
   );
@@ -161,23 +169,24 @@ function TransferModal(props: { alert: AlertView | null; stationId: string; onCl
 // ---------- 工单 ----------
 
 function TicketsTab(props: { stationId: string }) {
+  const { t } = usePrefs();
   const [status, setStatus] = useState<string>("DISPATCHED");
   const tickets = usePolling(() => listTickets(props.stationId, status || undefined));
   const [detail, setDetail] = useState<string | null>(null);
 
   const columns = [
-    { title: "工单号", dataIndex: "ticket_no", width: 150 },
-    { title: "标题", dataIndex: "title" },
-    { title: "优先级", dataIndex: "priority", render: (v: string) => <Tag color={v === "P1" ? "red" : "blue"}>{v}</Tag> },
-    { title: "受理人", dataIndex: "assignee_name", width: 100 },
-    { title: "升级", dataIndex: "escalate_level", width: 60 },
-    { title: "状态", dataIndex: "status", width: 140 },
+    { title: t("ops.ticketNo"), dataIndex: "ticket_no", width: 150 },
+    { title: t("ops.titleCol"), dataIndex: "title" },
+    { title: t("ops.priority"), dataIndex: "priority", render: (v: string) => <Tag color={v === "P1" ? "red" : "blue"}>{v}</Tag> },
+    { title: t("ops.assignee"), dataIndex: "assignee_name", width: 100 },
+    { title: t("ops.escalate"), dataIndex: "escalate_level", width: 60 },
+    { title: t("common.status"), dataIndex: "status", width: 140, render: (v: string) => enumLabel("enum.ticket", v) },
     {
-      title: "操作",
-      render: (_: unknown, t: TicketView) => (
+      title: t("common.actions"),
+      render: (_: unknown, tk: TicketView) => (
         <TicketActions
           stationId={props.stationId}
-          ticket={t}
+          ticket={tk}
           onDone={() => void tickets.refresh()}
           onDetail={(id) => setDetail(id)}
         />
@@ -188,11 +197,11 @@ function TicketsTab(props: { stationId: string }) {
   return (
     <>
       <Select value={status} onChange={setStatus} style={{ width: 160, marginBottom: 12 }}>
-        <Select.Option value="DISPATCHED">待接单</Select.Option>
-        <Select.Option value="ACCEPTED">已接单</Select.Option>
-        <Select.Option value="PROCESSING">处理中</Select.Option>
-        <Select.Option value="SUBMITTED">待验收</Select.Option>
-        <Select.Option value="">全部</Select.Option>
+        <Select.Option value="DISPATCHED">{t("ops.stDispatched")}</Select.Option>
+        <Select.Option value="ACCEPTED">{t("ops.stAccepted")}</Select.Option>
+        <Select.Option value="PROCESSING">{t("ops.stProcessing")}</Select.Option>
+        <Select.Option value="SUBMITTED">{t("ops.stSubmitted")}</Select.Option>
+        <Select.Option value="">{t("common.all")}</Select.Option>
       </Select>
       <Table<TicketView>
         rowKey="ticket_id"
@@ -208,7 +217,8 @@ function TicketsTab(props: { stationId: string }) {
 }
 
 function TicketActions(props: { stationId: string; ticket: TicketView; onDone: () => void; onDetail: (id: string) => void }) {
-  const t = props.ticket;
+  const { t } = usePrefs();
+  const tk = props.ticket;
   const [dispatchOpen, setDispatchOpen] = useState(false);
   const [submitOpen, setSubmitOpen] = useState(false);
   const ok = (msg: string) => {
@@ -217,26 +227,27 @@ function TicketActions(props: { stationId: string; ticket: TicketView; onDone: (
   };
   return (
     <>
-      {t.status === "PENDING_DISPATCH" && (
-        <Button size="small" type="primary" onClick={() => setDispatchOpen(true)}>派单</Button>
+      {tk.status === "PENDING_DISPATCH" && (
+        <Button size="small" type="primary" onClick={() => setDispatchOpen(true)}>{t("ops.dispatch")}</Button>
       )}
-      {t.status === "DISPATCHED" && (
-        <Button size="small" type="primary" onClick={async () => { await acceptTicket(t.ticket_id); ok("已接单"); }}>接单</Button>
+      {tk.status === "DISPATCHED" && (
+        <Button size="small" type="primary" onClick={async () => { await acceptTicket(tk.ticket_id); ok(t("ops.accepted")); }}>{t("ops.accept")}</Button>
       )}
-      {t.status === "ACCEPTED" && (
-        <Button size="small" type="primary" onClick={async () => { await startTicket(t.ticket_id); ok("已开工"); }}>开工</Button>
+      {tk.status === "ACCEPTED" && (
+        <Button size="small" type="primary" onClick={async () => { await startTicket(tk.ticket_id); ok(t("ops.started")); }}>{t("ops.start")}</Button>
       )}
-      {t.status === "PROCESSING" && (
-        <Button size="small" type="primary" onClick={() => setSubmitOpen(true)}>提交</Button>
+      {tk.status === "PROCESSING" && (
+        <Button size="small" type="primary" onClick={() => setSubmitOpen(true)}>{t("common.submit")}</Button>
       )}
-      <Button size="small" onClick={() => props.onDetail(t.ticket_id)}>详情</Button>
-      <DispatchModal open={dispatchOpen} stationId={props.stationId} ticket={t} onClose={() => setDispatchOpen(false)} onDone={() => { setDispatchOpen(false); ok("已派单"); }} />
-      <SubmitModal open={submitOpen} ticket={t} onClose={() => setSubmitOpen(false)} onDone={() => { setSubmitOpen(false); ok("已提交"); }} />
+      <Button size="small" onClick={() => props.onDetail(tk.ticket_id)}>{t("common.detail")}</Button>
+      <DispatchModal open={dispatchOpen} stationId={props.stationId} ticket={tk} onClose={() => setDispatchOpen(false)} onDone={() => { setDispatchOpen(false); ok(t("ops.dispatched")); }} />
+      <SubmitModal open={submitOpen} ticket={tk} onClose={() => setSubmitOpen(false)} onDone={() => { setSubmitOpen(false); ok(t("ops.submittedOk")); }} />
     </>
   );
 }
 
 function DispatchModal(props: { open: boolean; stationId: string; ticket: TicketView; onClose: () => void; onDone: () => void }) {
+  const { t } = usePrefs();
   const [staff, setStaff] = useState<{ user_id: string; name: string }[]>([]);
   const [uid, setUid] = useState<string>("");
   useMemo(() => {
@@ -246,8 +257,10 @@ function DispatchModal(props: { open: boolean; stationId: string; ticket: Ticket
   }, [props.open, props.stationId]);
   return (
     <Modal
-      title={`派单：${props.ticket.ticket_no}`}
+      title={t("ops.dispatchTitle", { no: props.ticket.ticket_no })}
       open={props.open}
+      okText={t("common.confirm")}
+      cancelText={t("common.cancel")}
       onCancel={props.onClose}
       onOk={async () => {
         await dispatchTicket(props.ticket.ticket_id, uid);
@@ -255,8 +268,8 @@ function DispatchModal(props: { open: boolean; stationId: string; ticket: Ticket
       }}
     >
       <Form layout="vertical">
-        <Form.Item label="受理人（区域+技能候选）">
-          <Select value={uid} onChange={setUid} style={{ width: "100%" }} placeholder="自动匹配">
+        <Form.Item label={t("ops.assigneeLabel")}>
+          <Select value={uid} onChange={setUid} style={{ width: "100%" }} placeholder={t("ops.autoMatch")}>
             {staff.map((s) => (
               <Select.Option key={s.user_id} value={s.user_id}>
                 {s.name}
@@ -270,23 +283,27 @@ function DispatchModal(props: { open: boolean; stationId: string; ticket: Ticket
 }
 
 function SubmitModal(props: { open: boolean; ticket: TicketView; onClose: () => void; onDone: () => void }) {
+  const { t } = usePrefs();
   const [result, setResult] = useState("");
   return (
     <Modal
-      title={`提交处理结果：${props.ticket.ticket_no}`}
+      title={t("ops.submitTitle", { no: props.ticket.ticket_no })}
       open={props.open}
+      okText={t("common.confirm")}
+      cancelText={t("common.cancel")}
       onCancel={props.onClose}
       onOk={async () => {
         await submitTicket(props.ticket.ticket_id, result);
         props.onDone();
       }}
     >
-      <Input.TextArea value={result} onChange={(e) => setResult(e.target.value)} placeholder="处理结果说明" rows={3} />
+      <Input.TextArea value={result} onChange={(e) => setResult(e.target.value)} placeholder={t("ops.resultPlaceholder")} rows={3} />
     </Modal>
   );
 }
 
 function DetailDrawer(props: { ticketId: string | null; onClose: () => void }) {
+  const { t } = usePrefs();
   const [data, setData] = useState<import("@micro/shared/types").TicketGetResp | null>(null);
   useMemo(() => {
     if (props.ticketId) {
@@ -296,16 +313,16 @@ function DetailDrawer(props: { ticketId: string | null; onClose: () => void }) {
     }
   }, [props.ticketId]);
   return (
-    <Drawer title={data?.ticket?.ticket_no ?? "工单详情"} open={!!props.ticketId} onClose={props.onClose} width={520}>
+    <Drawer title={data?.ticket?.ticket_no ?? t("ops.detailTitle")} open={!!props.ticketId} onClose={props.onClose} width={520}>
       {data && (
         <>
           <p><b>{data.ticket.title}</b></p>
           <p>{data.ticket.content}</p>
-          <p>状态：{data.ticket.status} ｜ 受理人：{data.ticket.assignee_name || "-"}</p>
-          <h4>时间线</h4>
+          <p>{t("ops.statusLine", { status: enumLabel("enum.ticket", data.ticket.status), assignee: data.ticket.assignee_name || "-" })}</p>
+          <h4>{t("ops.timeline")}</h4>
           {(data.logs ?? []).map((g) => (
-            <p key={g.log_id} style={{ fontSize: 12, color: "#666" }}>
-              {new Date(g.created_at).toLocaleString()} · {g.action} {g.from_status && `(${g.from_status}→${g.to_status})`} {g.note}
+            <p key={g.log_id} style={{ fontSize: 12, color: "var(--text-sub, #666)" }}>
+              {new Date(g.created_at).toLocaleString(getLocale())} · {g.action} {g.from_status && `(${enumLabel("enum.ticket", g.from_status)}→${enumLabel("enum.ticket", g.to_status)})`} {g.note}
             </p>
           ))}
         </>
@@ -317,19 +334,20 @@ function DetailDrawer(props: { ticketId: string | null; onClose: () => void }) {
 // ---------- 巡检 ----------
 
 function InspectionTab(props: { stationId: string }) {
+  const { t } = usePrefs();
   const tasks = usePolling(() => listInspectionTasks(props.stationId, "PENDING"));
   const [submitTask, setSubmitTask] = useState<InspectionTaskView | null>(null);
 
   const columns = [
-    { title: "任务", dataIndex: "title" },
-    { title: "计划时刻", dataIndex: "scheduled_for", render: (v: number) => (v ? new Date(v).toLocaleString() : "-") },
-    { title: "状态", dataIndex: "status", width: 100 },
+    { title: t("ops.titleCol"), dataIndex: "title" },
+    { title: t("ops.planTime"), dataIndex: "scheduled_for", render: (v: number) => (v ? new Date(v).toLocaleString(getLocale()) : "-") },
+    { title: t("common.status"), dataIndex: "status", width: 100 },
     {
-      title: "操作",
-      render: (_: unknown, t: InspectionTaskView) =>
-        t.status === "PENDING" && (
-          <Button size="small" type="primary" onClick={() => setSubmitTask(t)}>
-            批量提交
+      title: t("common.actions"),
+      render: (_: unknown, tk: InspectionTaskView) =>
+        tk.status === "PENDING" && (
+          <Button size="small" type="primary" onClick={() => setSubmitTask(tk)}>
+            {t("ops.batchSubmit")}
           </Button>
         ),
     },
@@ -353,7 +371,7 @@ function InspectionTab(props: { stationId: string }) {
           onClose={() => setSubmitTask(null)}
           onDone={() => {
             setSubmitTask(null);
-            message.success("巡检已提交（异常项已生成工单）");
+            message.success(t("ops.inspSubmitted"));
             void tasks.refresh();
           }}
         />
@@ -363,13 +381,14 @@ function InspectionTab(props: { stationId: string }) {
 }
 
 function SubmitInspection(props: { taskId: string; onClose: () => void; onDone: () => void }) {
+  const { t } = usePrefs();
   const [detail, setDetail] = useState<import("@micro/shared/types").InspectionTaskGetResp | null>(null);
   const [values, setValues] = useState<Record<string, { result: string; anomalous: boolean }>>({});
   useState(() => {
     void getInspectionTask(props.taskId).then((out) => {
       // 提交前明细为空：用默认日巡 schema 兜底（station_created 自动建计划的模板口径）
       if (!out.items || out.items.length === 0) {
-        const names = ["外观检查", "连接紧固", "异味异响"];
+        const names = [t("ops.inspItem1"), t("ops.inspItem2"), t("ops.inspItem3")];
         const items = names.map((name, i) => ({
           item_id: String(i),
           task_id: out.task?.task_id ?? props.taskId,
@@ -393,8 +412,10 @@ function SubmitInspection(props: { taskId: string; onClose: () => void; onDone: 
 
   return (
     <Modal
-      title="巡检批量提交"
+      title={t("ops.inspTitle")}
       open
+      okText={t("common.confirm")}
+      cancelText={t("common.cancel")}
       onCancel={props.onClose}
       width={640}
       onOk={async () => {
@@ -417,7 +438,7 @@ function SubmitInspection(props: { taskId: string; onClose: () => void; onDone: 
                 size="small"
                 value={v.result}
                 onChange={(e) => setValues({ ...values, [it.item_id]: { ...v, result: e.target.value } })}
-                placeholder="结果"
+                placeholder={t("ops.result")}
               />
             </Col>
             <Col span={6}>
@@ -427,7 +448,7 @@ function SubmitInspection(props: { taskId: string; onClose: () => void; onDone: 
                   checked={v.anomalous}
                   onChange={(e) => setValues({ ...values, [it.item_id]: { ...v, anomalous: e.target.checked } })}
                 />{" "}
-                异常（生成工单）
+                {t("ops.anomalous")}
               </label>
             </Col>
           </Row>

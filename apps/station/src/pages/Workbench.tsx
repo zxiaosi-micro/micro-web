@@ -6,9 +6,11 @@ import { Button, Card, Col, List, Row, Tag } from "antd";
 import { AlertOutlined, FileDoneOutlined } from "@ant-design/icons";
 import { usePolling } from "@micro/shared";
 import { StatCard } from "@micro/shared/theme";
+import { enumLabel, usePrefs } from "@micro/shared/prefs";
 import { foldPending, pendingAlerts, pendingTickets, type PendingState } from "../api";
 
 export default function WorkbenchPage(props: { stationId: string; onGoOps: () => void }) {
+  const { t } = usePrefs();
   const [alertState, setAlertState] = useState<PendingState>({ unread: 0, sinceId: "0" });
   const [ticketState, setTicketState] = useState<PendingState>({ unread: 0, sinceId: "0" });
   const [alertItems, setAlertItems] = useState<import("@micro/shared/types").AlertBriefView[]>([]);
@@ -34,7 +36,7 @@ export default function WorkbenchPage(props: { stationId: string; onGoOps: () =>
     <Row gutter={[16, 16]}>
       <Col xs={12} md={6}>
         <StatCard
-          title="未读告警"
+          title={t("wb.unreadAlerts")}
           value={alertState.unread}
           icon={<AlertOutlined />}
           tone="#fa541c"
@@ -43,7 +45,7 @@ export default function WorkbenchPage(props: { stationId: string; onGoOps: () =>
       </Col>
       <Col xs={12} md={6}>
         <StatCard
-          title="活跃工单"
+          title={t("wb.activeTickets")}
           value={ticketState.unread}
           icon={<FileDoneOutlined />}
           tone="#6d4df6"
@@ -53,16 +55,16 @@ export default function WorkbenchPage(props: { stationId: string; onGoOps: () =>
       <Col xs={24} md={12}>
         <Card className="stat-card" style={{ animationDelay: "160ms" }}>
           <Button className="btn-brand-grad" type="primary" onClick={props.onGoOps}>
-            进入运维处理
+            {t("wb.goOps")}
           </Button>
-          <div style={{ marginTop: 8, color: "#999", fontSize: 12 }}>
-            10s 轮询增量刷新（页面隐藏自动暂停）
+          <div style={{ marginTop: 8, color: "var(--text-sub, #999)", fontSize: 12 }}>
+            {t("wb.pollHint")}
           </div>
         </Card>
       </Col>
 
       <Col xs={24} lg={12}>
-        <Card title="最新告警" extra={<Button type="link" onClick={alerts.refresh}>刷新</Button>}>
+        <Card title={t("wb.latestAlerts")} extra={<Button type="link" onClick={alerts.refresh}>{t("common.refresh")}</Button>}>
           <List
             size="small"
             dataSource={alertItems.slice(-20).reverse()}
@@ -73,23 +75,23 @@ export default function WorkbenchPage(props: { stationId: string; onGoOps: () =>
                 <Tag>{a.status}</Tag>
               </List.Item>
             )}
-            locale={{ emptyText: "暂无告警" }}
+            locale={{ emptyText: t("wb.noAlerts") }}
           />
         </Card>
       </Col>
       <Col xs={24} lg={12}>
-        <Card title="最新工单" extra={<Button type="link" onClick={tickets.refresh}>刷新</Button>}>
+        <Card title={t("wb.latestTickets")} extra={<Button type="link" onClick={tickets.refresh}>{t("common.refresh")}</Button>}>
           <List
             size="small"
             dataSource={ticketItems.slice(-20).reverse()}
-            renderItem={(t) => (
+            renderItem={(tk) => (
               <List.Item>
-                <Tag color={t.priority === "P1" ? "red" : "blue"}>{t.priority}</Tag>
-                <span style={{ flex: 1 }}>{t.title}</span>
-                <Tag>{t.status}</Tag>
+                <Tag color={tk.priority === "P1" ? "red" : "blue"}>{tk.priority}</Tag>
+                <span style={{ flex: 1 }}>{tk.title}</span>
+                <Tag>{enumLabel("enum.ticket", tk.status)}</Tag>
               </List.Item>
             )}
-            locale={{ emptyText: "暂无工单" }}
+            locale={{ emptyText: t("wb.noTickets") }}
           />
         </Card>
       </Col>

@@ -7,9 +7,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useEventListener } from "ahooks";
 import { Card, Col, Progress, Row, Tag } from "antd";
 import { login, tokenStore, usePolling } from "@micro/shared";
+import { usePrefs } from "@micro/shared/prefs";
 import { pendingAlerts, stationMonitor } from "../api";
 
 export default function ScreenPage() {
+  const { t } = usePrefs();
   const [ready, setReady] = useState(!!tokenStore.getAccessToken());
   const scaleRef = useRef<HTMLDivElement>(null);
 
@@ -52,26 +54,26 @@ export default function ScreenPage() {
       <div className="screen-scanline" />
       <div ref={scaleRef} style={{ width: 1920, height: 1080, boxSizing: "border-box", transformOrigin: "top left", padding: 24, color: "#cfe8ff" }}>
         <h1 className="screen-title">
-          {d ? "场站运行大屏" : "场站运行大屏（未配置 station_id）"}
+          {d ? t("screen.title") : t("screen.noStationTitle")}
         </h1>
         <Row gutter={24}>
           <Col span={6}>
-            <ScreenCard title="设备总数" value={d?.device_count ?? "-"} delay={0} />
+            <ScreenCard title={t("screen.deviceTotal")} value={d?.device_count ?? "-"} delay={0} />
           </Col>
           <Col span={6}>
-            <ScreenCard title="在线设备" value={d?.online_count ?? "-"} delay={80} />
+            <ScreenCard title={t("screen.onlineDevices")} value={d?.online_count ?? "-"} delay={80} />
           </Col>
           <Col span={6}>
-            <ScreenCard title="平均 SOC" delay={160}>
+            <ScreenCard title={t("screen.avgSoc")} delay={160}>
               <Progress type="dashboard" percent={Math.round(d?.avg_soc ?? 0)} size={120} strokeColor="#36cfc9" />
             </ScreenCard>
           </Col>
           <Col span={6}>
-            <ScreenCard title="总功率 kW" value={d?.total_power ?? "-"} delay={240} />
+            <ScreenCard title={t("screen.totalPower")} value={d?.total_power ?? "-"} delay={240} />
           </Col>
         </Row>
         <Card
-          title={<span style={{ color: "#cfe8ff" }}>最新告警（10s 轮询）</span>}
+          title={<span style={{ color: "#cfe8ff" }}>{t("screen.latestAlerts")}</span>}
           className="screen-card"
           style={{ marginTop: 24, animationDelay: "320ms" }}
         >
@@ -84,7 +86,7 @@ export default function ScreenPage() {
               </span>
             </p>
           ))}
-          {(alerts.data ?? []).length === 0 && <p style={{ color: "#5b7ca3" }}>暂无告警</p>}
+          {(alerts.data ?? []).length === 0 && <p style={{ color: "#5b7ca3" }}>{t("screen.noAlerts")}</p>}
         </Card>
         {!ready && (
           <p style={{ color: "#5b7ca3", textAlign: "center", marginTop: 24 }}>

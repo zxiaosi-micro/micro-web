@@ -6,6 +6,19 @@
     <meta name="theme-color" content="#180f3d" />
     <meta name="description" content="电池全生命周期管理平台 · 场站运营" />
     <title>场站 Web · 电池全生命周期平台</title>
+    <script>
+      // FOUC 防护：React 挂载前按持久化偏好设 html 属性（prefs 模块 key 同源）
+      (function () {
+        try {
+          if (localStorage.getItem("micro.theme") === "dark") {
+            document.documentElement.dataset.theme = "dark";
+          }
+          if (localStorage.getItem("micro.locale") === "en-US") {
+            document.documentElement.lang = "en";
+          }
+        } catch (e) { /* storage 不可用时保持亮色中文 */ }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

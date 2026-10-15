@@ -2,28 +2,30 @@
 
 import { Card, Col, Progress, Row, Table, Tag } from "antd";
 import { usePolling } from "@micro/shared";
+import { getLocale, usePrefs } from "@micro/shared/prefs";
 import type { StationMonitorItem } from "@micro/shared/types";
 import { stationMonitor } from "../api";
 
 export default function MonitorPage(props: { stationId: string }) {
+  const { t } = usePrefs();
   const monitor = usePolling(() => stationMonitor(props.stationId), { intervalMs: 10_000 });
 
   const data = monitor.data;
   const columns = [
     { title: "SN", dataIndex: "sn", key: "sn" },
     {
-      title: "在线",
+      title: t("mon.onlineCol"),
       dataIndex: "online",
       key: "online",
-      render: (v: boolean) => (v ? <Tag color="green">在线</Tag> : <Tag color="default">离线</Tag>),
+      render: (v: boolean) => (v ? <Tag color="green">{t("mon.online")}</Tag> : <Tag color="default">{t("mon.offline")}</Tag>),
     },
-    { title: "SOC %", dataIndex: "soc", key: "soc", render: (v: number) => v ?? "-" },
-    { title: "功率 kW", dataIndex: "power", key: "power", render: (v: number) => v ?? "-" },
+    { title: t("mon.socCol"), dataIndex: "soc", key: "soc", render: (v: number) => v ?? "-" },
+    { title: t("mon.powerCol"), dataIndex: "power", key: "power", render: (v: number) => v ?? "-" },
     {
-      title: "影子更新",
+      title: t("mon.shadowAt"),
       dataIndex: "shadow_at",
       key: "shadow_at",
-      render: (v: number) => (v ? new Date(v).toLocaleTimeString() : "-"),
+      render: (v: number) => (v ? new Date(v).toLocaleTimeString(getLocale()) : "-"),
     },
   ];
 
@@ -31,30 +33,30 @@ export default function MonitorPage(props: { stationId: string }) {
     <Row gutter={[16, 16]}>
       <Col span={6}>
         <Card loading={monitor.loading}>
-          <div>设备数</div>
+          <div>{t("mon.deviceCount")}</div>
           <b style={{ fontSize: 28 }}>{data?.device_count ?? "-"}</b>
         </Card>
       </Col>
       <Col span={6}>
         <Card loading={monitor.loading}>
-          <div>在线数</div>
+          <div>{t("mon.onlineCount")}</div>
           <b style={{ fontSize: 28 }}>{data?.online_count ?? "-"}</b>
         </Card>
       </Col>
       <Col span={6}>
         <Card loading={monitor.loading}>
-          <div>平均 SOC</div>
+          <div>{t("mon.avgSoc")}</div>
           <Progress type="dashboard" percent={Math.round(data?.avg_soc ?? 0)} size={90} />
         </Card>
       </Col>
       <Col span={6}>
         <Card loading={monitor.loading}>
-          <div>总功率 kW</div>
+          <div>{t("mon.totalPower")}</div>
           <b style={{ fontSize: 28 }}>{data?.total_power ?? "-"}</b>
         </Card>
       </Col>
       <Col span={24}>
-        <Card title="设备影子（10s 轮询）">
+        <Card title={t("mon.shadowCard")}>
           <Table<StationMonitorItem>
             rowKey={(r) => String(r.sn)}
             loading={monitor.loading}
