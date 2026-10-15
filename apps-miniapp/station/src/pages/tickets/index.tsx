@@ -9,20 +9,22 @@ import type { TicketView } from "@micro/shared/types";
 import { ensureStationMe } from "../../auth";
 import { acceptTicket, listTickets, startTicket, submitTicket } from "../../api";
 import { usePolling } from "../../polling";
+import { useThemePage } from "../../i18n";
 import "./index.scss";
 
-/** 状态筛选片（对齐场站 Web TicketsTab 的 Select 选项） */
-const STATUS_CHIPS: { value: string; label: string }[] = [
-  { value: "DISPATCHED", label: "待接单" },
-  { value: "ACCEPTED", label: "已接单" },
-  { value: "PROCESSING", label: "处理中" },
-  { value: "SUBMITTED", label: "待验收" },
-  { value: "", label: "全部" },
+/** 状态筛选片（对齐场站 Web TicketsTab 的 Select 选项；label 渲染期翻译） */
+const STATUS_CHIPS: { value: string; labelKey: string }[] = [
+  { value: "DISPATCHED", labelKey: "tk.stDispatched" },
+  { value: "ACCEPTED", labelKey: "tk.stAccepted" },
+  { value: "PROCESSING", labelKey: "tk.stProcessing" },
+  { value: "SUBMITTED", labelKey: "tk.stSubmitted" },
+  { value: "", labelKey: "tk.all" },
 ];
 
 const EMPTY_LIST = { total: 0, list: [] as TicketView[] };
 
 export default function TicketsPage() {
+  const { t, rootClass } = useThemePage("page.tickets");
   const [stationId, setStationId] = useState("");
   const [status, setStatus] = useState("DISPATCHED");
   // 提交处理结果弹层目标（小程序用自绘底部面板替代 Modal）
@@ -59,7 +61,7 @@ export default function TicketsPage() {
       Taro.showToast({ title: okMsg, icon: "success" });
       tickets.refresh();
     } catch (e) {
-      Taro.showToast({ title: e instanceof Error ? e.message : "操作失败", icon: "none" });
+      Taro.showToast({ title: e instanceof Error ? e.message : t("tk.actFailed"), icon: "none" });
     }
   };
 
@@ -71,13 +73,13 @@ export default function TicketsPage() {
       Taro.showToast({ title: "请填写处理结果说明", icon: "none" });
       return;
     }
-    await act(() => submitTicket(submitTarget.ticket_id, result.trim()), "已提交");
+    await act(() => submitTicket(submitTarget.ticket_id, result.trim()), t("tk.submitted"));
     setSubmitTarget(null);
     setResult("");
   };
 
   return (
-    <View className="app-page">
+    <View className={`app-page ${rootClass}`}>
       <View className="tk-chips">
         {STATUS_CHIPS.map((c) => (
           <View
@@ -85,46 +87,46 @@ export default function TicketsPage() {
             className={`app-chip ${status === c.value ? "app-chip-active" : ""}`}
             onClick={() => setStatus(c.value)}
           >
-            <Text className={`app-chip-text ${status === c.value ? "app-chip-active-text" : ""}`}>{c.label}</Text>
+            <Text className={`app-chip-text ${status === c.value ? "app-chip-active-text" : ""}`}>{t(c.labelKey)}</Text>
           </View>
         ))}
       </View>
 
       {tickets.error && <Text className="app-error">{tickets.error.message}</Text>}
-      {(tickets.data?.list ?? []).length === 0 && !tickets.loading && <Text className="app-empty">暂无工单</Text>}
-      {(tickets.data?.list ?? []).map((t) => (
-        <View key={t.ticket_id} className="tk-item">
+      {(tickets.data?.list ?? []).length === 0 && !tickets.loading && <Text className="app-empty">{t("tk.empty")}</Text>}
+      {(tickets.data?.list ?? []).map((tk) => (
+        <View key={tk.ticket_id} className="tk-item">
           <View className="tk-item-head">
-            <Text className="tk-item-no">{t.ticket_no}</Text>
-            <Text className="tk-item-title">{t.title}</Text>
-            <Text className={t.priority === "P1" ? "app-tag-danger-text" : "app-tag-text"}>{t.priority}</Text>
+            <Text className="tk-item-no">{tk.ticket_no}</Text>
+            <Text className="tk-item-title">{tk.title}</Text>
+            <Text className={tk.priority === "P1" ? "app-tag-danger-text" : "app-tag-text"}>{tk.priority}</Text>
           </View>
           <View className="tk-item-meta">
             <Text className="app-sub">
-              受理人 {t.assignee_name || "-"} · 升级 {t.escalate_level}
+              {t("tk.assignee")} {tk.assignee_name || "-"} · {t("tk.escalate")} {tk.escalate_level}
             </Text>
-            <Text className="app-sub">{t.status}</Text>
+            <Text className="app-sub">{tk.status}</Text>
           </View>
           <View className="tk-actions">
-            {t.status === "DISPATCHED" && (
-              <Button className="app-btn tk-actions-btn" onClick={() => void act(() => acceptTicket(t.ticket_id), "已接单")}>
-                <Text className="app-btn-text">接单</Text>
+            {tk.status === "DISPATCHED" && (
+              <Button className="app-btn tk-actions-btn" onClick={() => void act(() => acceptTicket(tk.ticket_id), t("tk.accepted"))}>
+                <Text className="app-btn-text">{t("tk.accept")}</Text>
               </Button>
             )}
-            {t.status === "ACCEPTED" && (
-              <Button className="app-btn tk-actions-btn" onClick={() => void act(() => startTicket(t.ticket_id), "已开工")}>
-                <Text className="app-btn-text">开工</Text>
+            {tk.status === "ACCEPTED" && (
+              <Button className="app-btn tk-actions-btn" onClick={() => void act(() => startTicket(tk.ticket_id), t("tk.started"))}>
+                <Text className="app-btn-text">{t("tk.start")}</Text>
               </Button>
             )}
-            {t.status === "PROCESSING" && (
+            {tk.status === "PROCESSING" && (
               <Button
                 className="app-btn tk-actions-btn"
                 onClick={() => {
                   setResult("");
-                  setSubmitTarget(t);
+                  setSubmitTarget(tk);
                 }}
               >
-                <Text className="app-btn-text">提交</Text>
+                <Text className="app-btn-text">{t("tk.submit")}</Text>
               </Button>
             )}
           </View>
@@ -134,12 +136,12 @@ export default function TicketsPage() {
       {submitTarget !== null && (
         <View className="app-mask" onClick={() => setSubmitTarget(null)}>
           <View className="app-panel" onClick={(e) => e.stopPropagation()}>
-            <Text className="app-title">提交处理结果：{submitTarget.ticket_no}</Text>
+            <Text className="app-title">{t("tk.submitTitle", { no: submitTarget.ticket_no })}</Text>
             <Textarea
               className="app-textarea tk-panel-textarea"
               value={result}
               onInput={(e) => setResult(e.detail.value)}
-              placeholder="处理结果说明"
+              placeholder={t("tk.resultPlaceholder")}
               maxlength={500}
               autoHeight
             />
@@ -148,7 +150,7 @@ export default function TicketsPage() {
                 <Text className="app-btn-plain-text">取消</Text>
               </Button>
               <Button className="app-btn tk-actions-btn" onClick={() => void onSubmit()}>
-                <Text className="app-btn-text">提交</Text>
+                <Text className="app-btn-text">{t("tk.submit")}</Text>
               </Button>
             </View>
           </View>

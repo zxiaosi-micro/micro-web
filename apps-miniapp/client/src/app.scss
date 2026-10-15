@@ -1,18 +1,70 @@
 // app.scss · 全局样式（扁平单类选择器，风格对齐 apps-mobile/ops；页面私有样式在各页 .scss）。
+//
+// 主题体系：page 选择器定义亮色 CSS 变量默认值，.theme-dark（挂页面根 View）覆盖；
+// page 元素自身的窗口背景无法被子树 class 影响——由 useThemePage 的 Taro.setBackgroundColor
+// 动态同步（MINIAPP_TOKENS 同源色板）。颜色一律走 var(--xxx)，禁止新增硬编码色值。
 
 page {
-  background-color: #f5f6f8;
+  /* ── 主题变量（亮色默认；与 shared prefs MINIAPP_TOKENS.light 同源） ── */
+  --page-bg: #f5f6f8;
+  --card-bg: #ffffff;
+  --text-title: #1f2329;
+  --text-sub: #86909c;
+  --brand: #1f6feb;
+  --brand-weak: #e8f3ff;
+  --input-bg: #f7f8fa;
+  --plain-bg: #f2f3f5;
+  --plain-text: #1f6feb;
+  --danger-text: #f53f3f;
+  --danger-bg: #ffece8;
+  --tag-bg: #e8f3ff;
+  --tag-text: #1f6feb;
+  --tag-warn-bg: #fff3e8;
+  --tag-warn-text: #d25f00;
+  --tag-danger-bg: #ffece8;
+  --tag-danger-text: #f53f3f;
+  --border-line: #f0f1f3;
+  --online: #0a7d43;
+  --danger-red: #b42318;
+  background-color: var(--page-bg);
+}
+
+/* ── 主题变量（暗色覆盖；与 shared prefs MINIAPP_TOKENS.dark 同源） ── */
+.theme-dark {
+  --page-bg: #0d1220;
+  --card-bg: #161d2f;
+  --text-title: #e5eaf3;
+  --text-sub: #8a94a6;
+  --brand: #4c8dff;
+  --brand-weak: #1b2a45;
+  --input-bg: #101725;
+  --plain-bg: #1a2236;
+  --plain-text: #7cabff;
+  --danger-text: #ff7875;
+  --danger-bg: #2a1a1e;
+  --tag-bg: #1b2a45;
+  --tag-text: #7cabff;
+  --tag-warn-bg: #2a2216;
+  --tag-warn-text: #ffa940;
+  --tag-danger-bg: #2a1a1e;
+  --tag-danger-text: #ff7875;
+  --border-line: #232c42;
+  --online: #4ade80;
+  --danger-red: #ff7875;
+  background-color: var(--page-bg);
 }
 
 /* 页面容器 */
 .app-page {
+  min-height: 100vh;
   padding: 24px;
-  background-color: #f5f6f8;
+  background-color: var(--page-bg);
+  box-sizing: border-box;
 }
 
 /* 卡片 */
 .app-card {
-  background-color: #ffffff;
+  background-color: var(--card-bg);
   border-radius: 12px;
   padding: 24px;
   margin-bottom: 20px;
@@ -22,18 +74,18 @@ page {
 .app-title {
   font-size: 32px;
   font-weight: bold;
-  color: #1f2329;
+  color: var(--text-title);
 }
 
 .app-sub {
   font-size: 24px;
-  color: #86909c;
+  color: var(--text-sub);
   margin-top: 8px;
 }
 
 /* 主按钮 / 次按钮 / 危险按钮 */
 .app-btn {
-  background-color: #1f6feb;
+  background-color: var(--brand);
   border-radius: 8px;
   padding: 20px 24px;
   margin-top: 20px;
@@ -46,48 +98,50 @@ page {
 }
 
 .app-btn-plain {
-  background-color: #f2f3f5;
+  background-color: var(--plain-bg);
   border-radius: 8px;
   padding: 20px 24px;
   margin-top: 16px;
 }
 
 .app-btn-plain-text {
-  color: #1f6feb;
+  color: var(--plain-text);
   font-size: 28px;
   text-align: center;
 }
 
 .app-btn-danger {
-  background-color: #ffece8;
+  background-color: var(--danger-bg);
   border-radius: 8px;
   padding: 20px 24px;
   margin-top: 16px;
 }
 
 .app-btn-danger-text {
-  color: #f53f3f;
+  color: var(--danger-text);
   font-size: 28px;
   text-align: center;
 }
 
 /* 输入框/文本域 */
 .app-input {
-  background-color: #f7f8fa;
+  background-color: var(--input-bg);
   border-radius: 8px;
   padding: 20px;
   margin-top: 16px;
   font-size: 28px;
+  color: var(--text-title);
 }
 
 .app-textarea {
-  background-color: #f7f8fa;
+  background-color: var(--input-bg);
   border-radius: 8px;
   padding: 20px;
   margin-top: 16px;
   font-size: 28px;
   width: auto;
   min-height: 160px;
+  color: var(--text-title);
 }
 
 /* 行布局 */
@@ -116,48 +170,48 @@ page {
 .app-tag {
   border-radius: 6px;
   padding: 4px 12px;
-  background-color: #e8f3ff;
+  background-color: var(--tag-bg);
 }
 
 .app-tag-text {
-  color: #1f6feb;
+  color: var(--tag-text);
   font-size: 22px;
 }
 
 .app-tag-warn {
-  background-color: #fff3e8;
+  background-color: var(--tag-warn-bg);
 }
 
 .app-tag-warn-text {
-  color: #d25f00;
+  color: var(--tag-warn-text);
   font-size: 22px;
 }
 
 .app-tag-danger {
-  background-color: #ffece8;
+  background-color: var(--tag-danger-bg);
 }
 
 .app-tag-danger-text {
-  color: #f53f3f;
+  color: var(--tag-danger-text);
   font-size: 22px;
 }
 
 /* 空态/错误提示/加载中 */
 .app-empty {
-  color: #86909c;
+  color: var(--text-sub);
   font-size: 26px;
   text-align: center;
   margin-top: 40px;
 }
 
 .app-error {
-  color: #f53f3f;
+  color: var(--danger-text);
   font-size: 24px;
   margin-top: 12px;
 }
 
 .app-loading {
-  color: #86909c;
+  color: var(--text-sub);
   font-size: 24px;
   text-align: center;
   margin-top: 24px;

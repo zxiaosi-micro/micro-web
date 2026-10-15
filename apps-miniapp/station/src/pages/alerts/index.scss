@@ -7,7 +7,7 @@
 }
 
 .al-item {
-  background-color: #ffffff;
+  background-color: var(--card-bg);
   border-radius: 12rpx;
   padding: 24rpx;
   margin-bottom: 16rpx;
@@ -23,7 +23,7 @@
   flex: 1;
   font-size: 28rpx;
   font-weight: bold;
-  color: #1f2329;
+  color: var(--text-title);
   margin-left: 12rpx;
 }
 
@@ -50,7 +50,7 @@
 .al-panel-title {
   font-size: 32rpx;
   font-weight: bold;
-  color: #1f2329;
+  color: var(--text-title);
 }
 
 .al-panel-row {

@@ -18,6 +18,7 @@
     "baseUrl": ".",
     "typeRoots": ["node_modules/@types"],
     "paths": {
+      "@micro/shared/prefs": ["../../packages/shared/src/prefs.tsx"],
       "@micro/shared/types/mobile-bff": ["../../packages/shared/types/mobile-bff.ts"],
       "@micro/shared/types": ["../../packages/shared/types/index.ts"],
       "@micro/shared/types/*": ["../../packages/shared/types/*"]

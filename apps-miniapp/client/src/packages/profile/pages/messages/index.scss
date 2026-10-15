@@ -3,12 +3,12 @@
 .pf-unread {
   display: block;
   font-size: 24px;
-  color: #8a919f;
+  color: var(--text-sub);
   margin-bottom: 16px;
 }
 
 .pf-unread-card {
-  border-left: 6px solid #1f6feb;
+  border-left: 6px solid var(--brand);
 }
 
 .pf-head {
@@ -20,14 +20,14 @@
 .pf-title {
   font-size: 28px;
   font-weight: 600;
-  color: #1f2329;
+  color: var(--text-title);
 }
 
 .pf-dot {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background-color: #1f6feb;
+  background-color: var(--brand);
   display: inline-block;
 }
 
@@ -35,43 +35,43 @@
   display: block;
   margin-top: 10px;
   font-size: 26px;
-  color: #1f2329;
+  color: var(--text-title);
 }
 
 .pf-meta {
   display: block;
   margin-top: 10px;
   font-size: 22px;
-  color: #8a919f;
+  color: var(--text-sub);
 }
 
 .pf-party {
   font-size: 30px;
   font-weight: 600;
-  color: #1f2329;
+  color: var(--text-title);
 }
 
 .pf-row {
   display: flex;
   justify-content: space-between;
   padding: 12px 0;
-  border-bottom: 1px solid #f0f1f3;
+  border-bottom: 1px solid var(--border-line);
 }
 
 .pf-key {
   font-size: 26px;
-  color: #8a919f;
+  color: var(--text-sub);
 }
 
 .pf-val {
   font-size: 26px;
-  color: #1f2329;
+  color: var(--text-title);
 }
 
 .pf-logout {
   margin-top: 24px;
   width: 100%;
-  color: #b42318;
-  background-color: #ffffff;
+  color: var(--danger-red);
+  background-color: var(--card-bg);
   font-size: 28px;
 }

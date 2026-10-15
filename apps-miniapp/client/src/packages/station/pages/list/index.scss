@@ -14,13 +14,13 @@
 .st-name {
   font-size: 30px;
   font-weight: 600;
-  color: #1f2329;
+  color: var(--text-title);
 }
 
 .st-meta {
   display: block;
   font-size: 24px;
-  color: #8a919f;
+  color: var(--text-sub);
   margin-top: 6px;
 }
 
@@ -39,19 +39,19 @@
 .st-summary-val {
   font-size: 32px;
   font-weight: 600;
-  color: #1f2329;
+  color: var(--text-title);
 }
 
 .st-summary-key {
   font-size: 22px;
-  color: #8a919f;
+  color: var(--text-sub);
   margin-top: 4px;
 }
 
 .st-online {
-  color: #0a7d43;
+  color: var(--online);
 }
 
 .st-offline {
-  color: #b42318;
+  color: var(--danger-red);
 }

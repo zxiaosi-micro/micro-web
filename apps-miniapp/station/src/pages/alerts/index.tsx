@@ -9,20 +9,22 @@ import type { AlertView } from "@micro/shared/types";
 import { ensureStationMe } from "../../auth";
 import { ackAlert, listAlerts, transferAlert } from "../../api";
 import { usePolling } from "../../polling";
+import { useThemePage } from "../../i18n";
 import { formatTs } from "../../time";
 import "./index.scss";
 
-/** 状态筛选片（对齐场站 Web AlertsTab 的 Select 选项） */
-const STATUS_CHIPS: { value: string; label: string }[] = [
-  { value: "OPEN", label: "未确认" },
-  { value: "ACKED", label: "已确认" },
-  { value: "CLOSED", label: "已关闭" },
-  { value: "", label: "全部" },
+/** 状态筛选片（对齐场站 Web AlertsTab 的 Select 选项；label 渲染期翻译） */
+const STATUS_CHIPS: { value: string; labelKey: string }[] = [
+  { value: "OPEN", labelKey: "al.stOpen" },
+  { value: "ACKED", labelKey: "al.stAcked" },
+  { value: "CLOSED", labelKey: "al.stClosed" },
+  { value: "", labelKey: "al.all" },
 ];
 
 const EMPTY_LIST = { total: 0, list: [] as AlertView[] };
 
 export default function AlertsPage() {
+  const { t, rootClass } = useThemePage("page.alerts");
   const [stationId, setStationId] = useState("");
   const [status, setStatus] = useState("OPEN");
   // 转工单面板目标（小程序用自绘底部面板替代 Modal）
@@ -56,10 +58,10 @@ export default function AlertsPage() {
   const onAck = async (a: AlertView) => {
     try {
       await ackAlert(a.alert_id);
-      Taro.showToast({ title: "已确认", icon: "success" });
+      Taro.showToast({ title: t("al.ackDone"), icon: "success" });
       alerts.refresh();
     } catch (e) {
-      Taro.showToast({ title: e instanceof Error ? e.message : "确认失败", icon: "none" });
+      Taro.showToast({ title: e instanceof Error ? e.message : t("al.ackFailed"), icon: "none" });
     }
   };
 
@@ -69,16 +71,16 @@ export default function AlertsPage() {
     }
     try {
       const out = await transferAlert(transferTarget.alert_id, autoDispatch);
-      Taro.showToast({ title: `已生成工单 ${out.ticket_no}${autoDispatch ? "并自动派单" : ""}`, icon: "none" });
+      Taro.showToast({ title: t("al.generated", { no: out.ticket_no, auto: autoDispatch ? t("al.generatedAuto") : "" }), icon: "none" });
       setTransferTarget(null);
       alerts.refresh();
     } catch (e) {
-      Taro.showToast({ title: e instanceof Error ? e.message : "转工单失败", icon: "none" });
+      Taro.showToast({ title: e instanceof Error ? e.message : t("al.transferFailed"), icon: "none" });
     }
   };
 
   return (
-    <View className="app-page">
+    <View className={`app-page ${rootClass}`}>
       <View className="al-chips">
         {STATUS_CHIPS.map((c) => (
           <View
@@ -86,13 +88,13 @@ export default function AlertsPage() {
             className={`app-chip ${status === c.value ? "app-chip-active" : ""}`}
             onClick={() => setStatus(c.value)}
           >
-            <Text className={`app-chip-text ${status === c.value ? "app-chip-active-text" : ""}`}>{c.label}</Text>
+            <Text className={`app-chip-text ${status === c.value ? "app-chip-active-text" : ""}`}>{t(c.labelKey)}</Text>
           </View>
         ))}
       </View>
 
       {alerts.error && <Text className="app-error">{alerts.error.message}</Text>}
-      {(alerts.data?.list ?? []).length === 0 && !alerts.loading && <Text className="app-empty">暂无告警</Text>}
+      {(alerts.data?.list ?? []).length === 0 && !alerts.loading && <Text className="app-empty">{t("al.empty")}</Text>}
       {(alerts.data?.list ?? []).map((a) => (
         <View key={a.alert_id} className="al-item">
           <View className="al-item-head">
@@ -119,7 +121,7 @@ export default function AlertsPage() {
                 </Button>
               )}
               <Button className="app-btn al-actions-btn" onClick={() => setTransferTarget(a)}>
-                <Text className="app-btn-text">转工单</Text>
+                <Text className="app-btn-text">{t("al.toTicket")}</Text>
               </Button>
             </View>
           )}
@@ -129,19 +131,19 @@ export default function AlertsPage() {
       {transferTarget !== null && (
         <View className="app-mask" onClick={() => setTransferTarget(null)}>
           <View className="app-panel" onClick={(e) => e.stopPropagation()}>
-            <Text className="al-panel-title">告警转工单</Text>
+            <Text className="al-panel-title">{t("al.transferTitle")}</Text>
             <Text className="app-sub">{transferTarget.title}</Text>
             <View className="al-panel-row">
-              <Text className="app-title">建单后自动派单</Text>
+              <Text className="app-title">{t("al.autoDispatch")}</Text>
               <Switch checked={autoDispatch} onChange={(e) => setAutoDispatch(e.detail.value)} />
             </View>
-            <Text className="app-sub">自动派单按区域+技能匹配驻站/运维人员</Text>
+            <Text className="app-sub">{t("al.autoDispatch")}</Text>
             <View className="al-panel-btns">
               <Button className="app-btn-plain al-panel-btn" onClick={() => setTransferTarget(null)}>
                 <Text className="app-btn-plain-text">取消</Text>
               </Button>
               <Button className="app-btn al-panel-btn al-panel-btn-last" onClick={() => void onTransfer()}>
-                <Text className="app-btn-text">生成{autoDispatch ? "（自动派单）" : ""}</Text>
+                <Text className="app-btn-text">{autoDispatch ? t("al.generateAuto") : t("al.generate")}</Text>
               </Button>
             </View>
           </View>

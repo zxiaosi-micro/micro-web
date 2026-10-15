@@ -4,9 +4,11 @@ import { Text, View } from "@tarojs/components";
 import Taro from "@tarojs/taro";
 import type { CustomerStationDetail } from "@micro/shared/types/mobile-bff";
 import { getStationDetail } from "../../../../api";
+import { useThemePage } from "../../../../i18n";
 import "../list/index.scss";
 
 export default function StationDetail() {
+  const { t, rootClass } = useThemePage("page.stationDetail");
   const [id, setId] = useState("");
   const [detail, setDetail] = useState<CustomerStationDetail | null>(null);
   const [error, setError] = useState("");
@@ -16,7 +18,7 @@ export default function StationDetail() {
       setDetail(await getStationDetail(stationId));
       setError("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "加载失败");
+      setError(e instanceof Error ? e.message : t("dev.loadFailed"));
     }
   }, []);
 
@@ -34,9 +36,9 @@ export default function StationDetail() {
   }, [id, load]);
 
   return (
-    <View className="app-page">
+    <View className={`app-page ${rootClass}`}>
       {error !== "" && <Text className="app-error">{error}</Text>}
-      {!detail && error === "" && <Text className="app-empty">加载中…</Text>}
+      {!detail && error === "" && <Text className="app-empty">{t("common.loading")}</Text>}
       {detail && (
         <>
           <View className="app-card">
@@ -51,13 +53,13 @@ export default function StationDetail() {
           </View>
 
           <View className="app-card">
-            <Text className="dd-section">设备监控（影子聚合）</Text>
-            {detail.devices.length === 0 && <Text className="app-empty">场站下暂无设备</Text>}
+            <Text className="dd-section">{t("st.monitorSection")}</Text>
+            {detail.devices.length === 0 && <Text className="app-empty">{t("st.noDevices")}</Text>}
             {detail.devices.map((d) => (
               <View className="app-card st-item" key={d.device_id}>
                 <View className="st-head">
                   <Text className="st-name">{d.sn}</Text>
-                  <Text className={`st-online`}>{d.online ? "在线" : "离线"}</Text>
+                  <Text className={`st-online`}>{d.online ? t("st.online") : t("st.offline")}</Text>
                 </View>
                 <View className="st-summary">
                   <View className="st-summary-item">
@@ -66,19 +68,19 @@ export default function StationDetail() {
                   </View>
                   <View className="st-summary-item">
                     <Text className="st-summary-val">{d.power}</Text>
-                    <Text className="st-summary-key">功率 kW</Text>
+                    <Text className="st-summary-key">{t("st.power")}</Text>
                   </View>
                   <View className="st-summary-item">
                     <Text className="st-summary-val">{d.voltage}</Text>
-                    <Text className="st-summary-key">电压 V</Text>
+                    <Text className="st-summary-key">{t("st.voltage")}</Text>
                   </View>
                   <View className="st-summary-item">
                     <Text className="st-summary-val">{d.temperature}</Text>
-                    <Text className="st-summary-key">温度 ℃</Text>
+                    <Text className="st-summary-key">{t("st.temp")}</Text>
                   </View>
                 </View>
                 <Text className="st-meta" onClick={() => Taro.navigateTo({ url: `/pages/device-detail/index?id=${d.device_id}` })}>
-                  查看设备详情 ›
+                  {t("st.viewDevice")}
                 </Text>
               </View>
             ))}

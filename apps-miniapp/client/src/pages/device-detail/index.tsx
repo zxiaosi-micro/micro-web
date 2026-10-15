@@ -5,13 +5,15 @@ import { Button, Text, View } from "@tarojs/components";
 import Taro from "@tarojs/taro";
 import type { CustomerDeviceDetail, TrendPoint } from "@micro/shared/types/mobile-bff";
 import { getDeviceDetail, getDeviceTrend } from "../../api";
-import { DEVICE_STATUS_LABEL, WARRANTY_STATUS_LABEL, fmtTime, fmtTimeShort, statusLabel, statusTone } from "../../ui";
+import { fmtTime, fmtTimeShort, statusTone, warrantyStatusLabel, deviceStatusLabel } from "../../ui";
+import { useThemePage } from "../../i18n";
 import "./index.scss";
 
 /** 趋势图取值键（CSS 条形高度归一用） */
 const TREND_BARS = 24;
 
 export default function DeviceDetail() {
+  const { t, rootClass } = useThemePage("page.deviceDetail");
   const [id, setId] = useState("");
   const [detail, setDetail] = useState<CustomerDeviceDetail | null>(null);
   const [trend, setTrend] = useState<TrendPoint[]>([]);
@@ -27,7 +29,7 @@ export default function DeviceDetail() {
       setTrend(t.points ?? []);
       setError("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "加载失败");
+      setError(e instanceof Error ? e.message : t("dev.loadFailed"));
     }
   }, []);
 
@@ -45,25 +47,25 @@ export default function DeviceDetail() {
   const bars = trend.slice(-TREND_BARS);
 
   return (
-    <View className="app-page">
+    <View className={`app-page ${rootClass}`}>
       {error !== "" && <Text className="app-error">{error}</Text>}
-      {!detail && error === "" && <Text className="app-empty">加载中…</Text>}
+      {!detail && error === "" && <Text className="app-empty">{t("common.loading")}</Text>}
       {detail && (
         <>
           <View className="app-card">
             <View className="dd-head">
               <Text className="dd-sn">{detail.device.sn}</Text>
               <Text className={`app-tag ${statusTone(detail.device.status)}`}>
-                {statusLabel(DEVICE_STATUS_LABEL, detail.device.status)}
+                {deviceStatusLabel(detail.device.status)}
               </Text>
             </View>
             <View className="dd-row">
-              <Text className="dd-key">型号</Text>
+              <Text className="dd-key">{t("dev.model")}</Text>
               <Text className="dd-val">{detail.device.model || "—"}</Text>
             </View>
             <View className="dd-row">
-              <Text className="dd-key">激活时间</Text>
-              <Text className="dd-val">{detail.device.activated_at ? fmtTime(detail.device.activated_at) : "未激活"}</Text>
+              <Text className="dd-key">{t("dev.activatedTime")}</Text>
+              <Text className="dd-val">{detail.device.activated_at ? fmtTime(detail.device.activated_at) : t("dev.notActivated")}</Text>
             </View>
             {detail.station && (
               <View
@@ -72,16 +74,16 @@ export default function DeviceDetail() {
                   Taro.navigateTo({ url: `/packages/station/pages/detail/index?id=${detail.station?.station_id ?? ""}` })
                 }
               >
-                <Text className="dd-key">所属场站</Text>
+                <Text className="dd-key">{t("dev.station")}</Text>
                 <Text className="dd-val dd-link">{detail.station.name || detail.station.station_no}</Text>
               </View>
             )}
           </View>
 
           <View className="app-card">
-            <Text className="dd-section">实时影子</Text>
+            <Text className="dd-section">{t("dev.shadowSection")}</Text>
             {detail.shadow.metrics.length === 0 && (
-              <Text className="app-empty">暂无上报数据（弱网设备上报后 5 分钟内可见）</Text>
+              <Text className="app-empty">{t("dev.noShadow")}</Text>
             )}
             <View className="dd-metrics">
               {detail.shadow.metrics.map((m) => (
@@ -92,13 +94,13 @@ export default function DeviceDetail() {
               ))}
             </View>
             {detail.shadow.ts !== "" && (
-              <Text className="dd-ts">更新于 {fmtTime(Number(detail.shadow.ts))}</Text>
+              <Text className="dd-ts">{t("dev.shadowUpdated", { time: fmtTime(Number(detail.shadow.ts)) })}</Text>
             )}
           </View>
 
           <View className="app-card">
-            <Text className="dd-section">遥测趋势（24h · 每分钟桶 · kW）</Text>
-            {bars.length === 0 && <Text className="app-empty">暂无趋势数据</Text>}
+            <Text className="dd-section">{t("dev.trendSection")}</Text>
+            {bars.length === 0 && <Text className="app-empty">{t("dev.noTrend")}</Text>}
             {bars.length > 0 && (
               <View className="dd-trend">
                 {bars.map((p) => (
@@ -118,16 +120,16 @@ export default function DeviceDetail() {
           </View>
 
           <View className="app-card">
-            <Text className="dd-section">质保</Text>
-            {detail.warranties.length === 0 && <Text className="app-empty">暂无质保记录</Text>}
+            <Text className="dd-section">{t("dev.warrantySection")}</Text>
+            {detail.warranties.length === 0 && <Text className="app-empty">{t("dev.noWarranty")}</Text>}
             {detail.warranties.map((w) => (
               <View className="dd-warranty" key={w.warranty_id}>
                 <View className="dd-head">
                   <Text className="dd-warranty-no">{w.warranty_no}</Text>
-                  <Text className={`app-tag ${statusTone(w.status)}`}>{statusLabel(WARRANTY_STATUS_LABEL, w.status)}</Text>
+                  <Text className={`app-tag ${statusTone(w.status)}`}>{warrantyStatusLabel(w.status)}</Text>
                 </View>
                 <Text className="dd-warranty-range">
-                  {w.start_at ? fmtTime(w.start_at) : "未起算"} ~ {w.end_at ? fmtTime(w.end_at) : "—"} · {w.months} 个月
+                  {t("dev.warrantyRange", { start: w.start_at ? fmtTime(w.start_at) : t("sv.notStarted"), end: w.end_at ? fmtTime(w.end_at) : "—", months: w.months })}
                 </Text>
               </View>
             ))}
@@ -135,7 +137,7 @@ export default function DeviceDetail() {
               className="dd-btn"
               onClick={() => Taro.navigateTo({ url: `/packages/service/pages/extension/index?warranty=` })}
             >
-              购买延保
+              {t("dev.buyExtension")}
             </Button>
           </View>
 
@@ -144,7 +146,7 @@ export default function DeviceDetail() {
               className="dd-btn dd-btn-primary"
               onClick={() => Taro.navigateTo({ url: `/packages/service/pages/ticket-new/index?deviceId=${detail.device.device_id}&sn=${detail.device.sn}` })}
             >
-              报修此设备
+              {t("dev.repair")}
             </Button>
           </View>
         </>

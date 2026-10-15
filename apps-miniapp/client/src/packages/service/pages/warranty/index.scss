@@ -2,7 +2,7 @@
 
 .sv-tabs {
   display: flex;
-  background-color: #ffffff;
+  background-color: var(--card-bg);
   border-radius: 12px;
   margin-bottom: 20px;
 }
@@ -12,13 +12,13 @@
   text-align: center;
   padding: 20px 0;
   font-size: 28px;
-  color: #8a919f;
+  color: var(--text-sub);
 }
 
 .sv-tab-active {
-  color: #1f6feb;
+  color: var(--brand);
   font-weight: 600;
-  border-bottom: 4px solid #1f6feb;
+  border-bottom: 4px solid var(--brand);
 }
 
 .sv-head {
@@ -31,20 +31,20 @@
 .sv-title {
   font-size: 28px;
   font-weight: 600;
-  color: #1f2329;
+  color: var(--text-title);
 }
 
 .sv-meta {
   display: block;
   font-size: 24px;
-  color: #8a919f;
+  color: var(--text-sub);
   margin-top: 6px;
 }
 
 .sv-price {
   font-size: 34px;
   font-weight: 600;
-  color: #b42318;
+  color: var(--danger-red);
 }
 
 .sv-qty {
@@ -58,10 +58,10 @@
   height: 56px;
   text-align: center;
   line-height: 52px;
-  border: 1px solid #dcdfe3;
+  border: 1px solid var(--border-line);
   border-radius: 8px;
   font-size: 32px;
-  color: #1f2329;
+  color: var(--text-title);
 }
 
 .sv-qty-val {
@@ -74,13 +74,13 @@
 .sv-btn {
   margin-top: 20px;
   width: 100%;
-  background-color: #1f6feb;
+  background-color: var(--brand);
   color: #ffffff;
   font-size: 28px;
 }
 
 .sv-btn[disabled] {
-  background-color: #a8c4f2;
+  background-color: var(--plain-bg);
   color: #ffffff;
 }
 
@@ -89,7 +89,7 @@
   min-height: 160px;
   padding: 16px;
   box-sizing: border-box;
-  background-color: #f5f6f8;
+  background-color: var(--page-bg);
   border-radius: 8px;
   font-size: 26px;
 }
@@ -98,45 +98,45 @@
   width: 100%;
   padding: 16px;
   box-sizing: border-box;
-  background-color: #f5f6f8;
+  background-color: var(--page-bg);
   border-radius: 8px;
   font-size: 26px;
 }
 
 .sv-pick {
   padding: 16px;
-  background-color: #f5f6f8;
+  background-color: var(--page-bg);
   border-radius: 8px;
   font-size: 26px;
-  color: #1f2329;
+  color: var(--text-title);
   margin-bottom: 16px;
 }
 
 .sv-photo {
   display: inline-block;
   padding: 12px 20px;
-  background-color: #f5f6f8;
+  background-color: var(--page-bg);
   border-radius: 8px;
   font-size: 24px;
-  color: #1f6feb;
+  color: var(--brand);
   margin-right: 12px;
 }
 
 .sv-log {
   padding: 12px 0;
-  border-bottom: 1px solid #f0f1f3;
+  border-bottom: 1px solid var(--border-line);
 }
 
 .sv-log-action {
   font-size: 26px;
-  color: #1f2329;
+  color: var(--text-title);
   font-weight: 500;
 }
 
 .sv-log-note {
   display: block;
   font-size: 24px;
-  color: #8a919f;
+  color: var(--text-sub);
   margin-top: 4px;
 }
 
@@ -148,9 +148,9 @@
 }
 
 .sv-sla-key {
-  color: #8a919f;
+  color: var(--text-sub);
 }
 
 .sv-sla-val {
-  color: #1f2329;
+  color: var(--text-title);
 }

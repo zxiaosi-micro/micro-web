@@ -1,37 +1,25 @@
-// ui.ts · 展示辅助：状态/级别中文标签 + 时间格式化（纯函数，无组件）。
+// ui.ts · 展示辅助：状态/级别标签（文案走 shared prefs 公共词条）+ 时间格式化（纯函数，无组件）。
 // ID 一律字符串渲染（E8）；时间戳为 epoch 毫秒（与场站 Web 同口径）；金额为 DECIMAL 字符串原样渲染。
+import { enumLabel } from "@micro/shared/prefs";
 
-/** 设备生命周期状态（device 域白名单） */
-export const DEVICE_STATUS_LABEL: Record<string, string> = {
-  IN_STOCK: "在库",
-  ACTIVATED: "已激活",
-  RETIRED: "已退役",
-  SCRAPPED: "已报废",
-};
+/** 设备生命周期状态（device 域白名单；词条正本 prefs-common enum.device） */
+export function deviceStatusLabel(status: string): string {
+  return enumLabel("enum.device", status);
+}
 
-/** 工单状态（ops 域状态机：PENDING_DISPATCH→DISPATCHED→ACCEPTED→PROCESSING→SUBMITTED→VERIFIED→CLOSED） */
-export const TICKET_STATUS_LABEL: Record<string, string> = {
-  PENDING_DISPATCH: "待派单",
-  DISPATCHED: "已派单",
-  ACCEPTED: "已接单",
-  PROCESSING: "处理中",
-  SUBMITTED: "已提交",
-  VERIFIED: "已验收",
-  CLOSED: "已关闭",
-  CANCELLED: "已取消",
-};
+/** 工单状态（ops 域状态机；词条正本 prefs-common enum.ticket） */
+export function ticketStatusLabel(status: string): string {
+  return enumLabel("enum.ticket", status);
+}
 
-/** 质保状态（contract 域） */
-export const WARRANTY_STATUS_LABEL: Record<string, string> = {
-  PENDING: "待生效",
-  ACTIVE: "生效中",
-  EXPIRED: "已到期",
-  REFUNDED: "已退款",
-};
+/** 质保状态（contract 域；词条正本 prefs-common enum.warranty） */
+export function warrantyStatusLabel(status: string): string {
+  return enumLabel("enum.warranty", status);
+}
 
-/** 通用合同/订单状态兜底映射（未命中原样展示） */
-export function statusLabel(map: Record<string, string>, status: string): string {
-  return map[status] ?? status;
+/** 通用合同/订单状态兜底：前缀段走公共词条，未命中原样展示 */
+export function statusLabel(prefix: string, status: string): string {
+  return enumLabel(prefix, status);
 }
 
 /** 状态 → 标签色类名（app-tag / app-tag-warn / app-tag-danger） */

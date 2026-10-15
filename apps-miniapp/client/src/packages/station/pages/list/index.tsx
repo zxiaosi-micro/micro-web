@@ -4,9 +4,11 @@ import { Text, View } from "@tarojs/components";
 import Taro from "@tarojs/taro";
 import type { CustomerStationItem, CustomerStationListResp } from "@micro/shared/types/mobile-bff";
 import { listStations } from "../../../../api";
+import { useThemePage } from "../../../../i18n";
 import "./index.scss";
 
 export default function StationList() {
+  const { t, rootClass } = useThemePage("page.stations");
   const [list, setList] = useState<CustomerStationItem[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -15,16 +17,16 @@ export default function StationList() {
     setLoading(true);
     listStations()
       .then((r: CustomerStationListResp) => setList(r.list ?? []))
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : "加载失败"))
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : t("dev.loadFailed")))
       .finally(() => setLoading(false));
   }, []);
 
   return (
-    <View className="app-page">
+    <View className={`app-page ${rootClass}`}>
       {error !== "" && <Text className="app-error">{error}</Text>}
-      {loading && <Text className="app-empty">加载中…</Text>}
+      {loading && <Text className="app-empty">{t("common.loading")}</Text>}
       {!loading && list.length === 0 && error === "" && (
-        <Text className="app-empty">暂无场站（场站订单交付后自动建站）</Text>
+        <Text className="app-empty">{t("st.empty")}</Text>
       )}
       {list.map((s) => (
         <View
@@ -40,7 +42,7 @@ export default function StationList() {
             {s.station_no} · {s.address || "—"}
           </Text>
           <Text className="st-meta">
-            容量 {s.capacity_kwh} kWh · 功率 {s.power_kw} kW
+            {t("st.capacity", { kwh: s.capacity_kwh, kw: s.power_kw })}
           </Text>
         </View>
       ))}

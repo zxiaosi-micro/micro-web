@@ -5,11 +5,14 @@ import { useEffect, useState } from "react";
 import { Button, Input, Text, View } from "@tarojs/components";
 import Taro, { useRouter } from "@tarojs/taro";
 import { cachedStationMe, isLoggedIn, login } from "../../auth";
+import { useThemePage } from "../../i18n";
+import PrefsRow from "../../prefs-row";
 import "./index.scss";
 
 const WORKBENCH_PAGE = "/pages/workbench/index";
 
 export default function LoginPage() {
+  const { t, rootClass } = useThemePage("page.login");
   const router = useRouter();
   const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
@@ -38,13 +41,13 @@ export default function LoginPage() {
   // 10402 同端互斥/会话注销被弹回：展示原因
   useEffect(() => {
     if (router.params.kicked === "1") {
-      setMessage(router.params.reason ? decodeURIComponent(router.params.reason) : "登录状态已失效，请重新登录");
+      setMessage(router.params.reason ? decodeURIComponent(router.params.reason) : t("login.expired"));
     }
   }, [router.params.kicked, router.params.reason]);
 
   const onSubmit = async () => {
     if (!mobile.trim() || !password) {
-      setMessage("请输入手机号与密码");
+      setMessage(t("login.needBoth"));
       return;
     }
     setSubmitting(true);
@@ -58,47 +61,49 @@ export default function LoginPage() {
     if (result.lockedSeconds && result.lockedSeconds > 0) {
       setLockedSeconds(result.lockedSeconds);
     }
-    setMessage(result.message ?? "登录失败");
+    setMessage(result.message ?? t("login.failed"));
   };
 
   const disabled = submitting || lockedSeconds > 0;
 
   return (
-    <View className="app-page">
+    <View className={`app-page ${rootClass}`}>
       <View className="login-brand">
-        <Text className="login-brand-title">场站小程序</Text>
-        <View className="login-brand-sub">场站人员专用（data_scope 锁定本场站）</View>
+        <Text className="login-brand-title">{t("app.brand")}</Text>
+        <View className="login-brand-sub">{t("login.subtitle")}</View>
       </View>
 
       <View className="login-card">
-        <View className="login-label">手机号</View>
+        <View className="login-label">{t("login.mobile")}</View>
         <Input
           className="app-input"
           value={mobile}
           onInput={(e) => setMobile(e.detail.value)}
-          placeholder="请输入手机号"
+          placeholder={t("login.mobilePlaceholder")}
           type="text"
           maxlength={20}
         />
-        <View className="login-label">密码</View>
+        <View className="login-label">{t("login.password")}</View>
         <Input
           className="app-input"
           value={password}
           onInput={(e) => setPassword(e.detail.value)}
-          placeholder="请输入密码"
+          placeholder={t("login.passwordPlaceholder")}
           password
         />
         {message !== null && <Text className="login-error">{message}</Text>}
-        {lockedSeconds > 0 && <Text className="login-locked">账号已锁定，剩余 {lockedSeconds} 秒后可重试</Text>}
+        {lockedSeconds > 0 && <Text className="login-locked">{t("login.lockedRetry", { seconds: lockedSeconds })}</Text>}
         <Button
           className={`app-btn ${disabled ? "login-btn-disabled" : ""}`}
           disabled={disabled}
           loading={submitting}
           onClick={() => void onSubmit()}
         >
-          <Text className="app-btn-text">{lockedSeconds > 0 ? `已锁定（${lockedSeconds}s）` : "登录"}</Text>
+          <Text className="app-btn-text">{lockedSeconds > 0 ? t("login.locked", { seconds: lockedSeconds }) : t("common.login")}</Text>
         </Button>
       </View>
+
+      <PrefsRow />
     </View>
   );
 }

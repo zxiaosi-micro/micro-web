@@ -10,7 +10,7 @@
 .dd-sn {
   font-size: 32px;
   font-weight: 600;
-  color: #1f2329;
+  color: var(--text-title);
 }
 
 .dd-row {
@@ -20,21 +20,21 @@
 }
 
 .dd-key {
-  color: #8a919f;
+  color: var(--text-sub);
   font-size: 26px;
 }
 
 .dd-val {
-  color: #1f2329;
+  color: var(--text-title);
   font-size: 26px;
 }
 
 .dd-link {
-  color: #1f6feb;
+  color: var(--brand);
 }
 
 .dd-station {
-  border-top: 1px solid #f0f1f3;
+  border-top: 1px solid var(--border-line);
   margin-top: 6px;
   padding-top: 16px;
 }
@@ -42,7 +42,7 @@
 .dd-section {
   font-size: 28px;
   font-weight: 600;
-  color: #1f2329;
+  color: var(--text-title);
 }
 
 .dd-metrics {
@@ -62,12 +62,12 @@
 .dd-metric-val {
   font-size: 34px;
   font-weight: 600;
-  color: #1f2329;
+  color: var(--text-title);
 }
 
 .dd-metric-key {
   font-size: 22px;
-  color: #8a919f;
+  color: var(--text-sub);
   margin-top: 4px;
 }
 
@@ -75,7 +75,7 @@
   display: block;
   margin-top: 12px;
   font-size: 22px;
-  color: #8a919f;
+  color: var(--text-sub);
 }
 
 .dd-trend {
@@ -88,26 +88,26 @@
 
 .dd-bar {
   flex: 1;
-  background-color: #1f6feb;
+  background-color: var(--brand);
   border-radius: 4px 4px 0 0;
   min-height: 4px;
 }
 
 .dd-warranty {
   padding: 16px 0;
-  border-bottom: 1px solid #f0f1f3;
+  border-bottom: 1px solid var(--border-line);
 }
 
 .dd-warranty-no {
   font-size: 26px;
-  color: #1f2329;
+  color: var(--text-title);
 }
 
 .dd-warranty-range {
   display: block;
   margin-top: 8px;
   font-size: 24px;
-  color: #8a919f;
+  color: var(--text-sub);
 }
 
 .dd-btn {
@@ -117,6 +117,6 @@
 }
 
 .dd-btn-primary {
-  background-color: #1f6feb;
+  background-color: var(--brand);
   color: #ffffff;
 }

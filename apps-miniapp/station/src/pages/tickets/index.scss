@@ -7,7 +7,7 @@
 }
 
 .tk-item {
-  background-color: #ffffff;
+  background-color: var(--card-bg);
   border-radius: 12rpx;
   padding: 24rpx;
   margin-bottom: 16rpx;
@@ -21,14 +21,14 @@
 
 .tk-item-no {
   font-size: 22rpx;
-  color: #86909c;
+  color: var(--text-sub);
 }
 
 .tk-item-title {
   flex: 1;
   font-size: 28rpx;
   font-weight: bold;
-  color: #1f2329;
+  color: var(--text-title);
   margin-left: 12rpx;
 }
 

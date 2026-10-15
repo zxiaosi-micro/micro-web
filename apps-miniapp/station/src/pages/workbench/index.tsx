@@ -13,12 +13,14 @@ import {
   type PendingState,
 } from "../../api";
 import { usePolling } from "../../polling";
+import { useThemePage } from "../../i18n";
 import "./index.scss";
 
 const LOGIN_PAGE = "/pages/login/index";
 const EMPTY_PENDING = { unread_count: 0, max_id: "0", items: [] as never[] };
 
 export default function WorkbenchPage() {
+  const { t, rootClass } = useThemePage("page.workbench");
   const [me, setMe] = useState<StationWebMeResp | null>(() => null);
   const [stationId, setStationId] = useState("");
   const [alertState, setAlertState] = useState<PendingState>({ unread: 0, sinceId: "0" });
@@ -79,11 +81,11 @@ export default function WorkbenchPage() {
   const goInspections = () => Taro.navigateTo({ url: "/pages/inspections/index" });
 
   return (
-    <View className="app-page">
+    <View className={`app-page ${rootClass}`}>
       <View className="app-card">
-        <Text className="app-title">{me?.station_name || "场站加载中…"}</Text>
+        <Text className="app-title">{me?.station_name || t("wb.loadingStation")}</Text>
         <Text className="app-sub">
-          {me ? `${me.station_no} · ${me.nickname} · data_scope=${me.data_scope}` : "正在获取驻站身份…"}
+          {me ? `${me.station_no} · ${me.nickname} · data_scope=${me.data_scope}` : t("wb.loadingMe")}
         </Text>
       </View>
 
@@ -97,36 +99,36 @@ export default function WorkbenchPage() {
               </View>
             )}
           </View>
-          <Text className="wb-stat-label">未读告警（10s 增量）</Text>
+          <Text className="wb-stat-label">{t("wb.unreadAlerts")}</Text>
         </View>
         <View className="wb-stat-card wb-stat-card-last">
           <View className="wb-stat-value-row">
             <Text className="wb-stat-value">{ticketState.unread}</Text>
           </View>
-          <Text className="wb-stat-label">活跃工单（10s 增量）</Text>
+          <Text className="wb-stat-label">{t("wb.activeTickets")}</Text>
         </View>
       </View>
 
       <View className="wb-nav-row">
         <Button className="app-btn wb-nav-btn" onClick={goAlerts}>
-          <Text className="app-btn-text">告警处理</Text>
+          <Text className="app-btn-text">{t("wb.goAlerts")}</Text>
         </Button>
         <Button className="app-btn wb-nav-btn" onClick={goTickets}>
-          <Text className="app-btn-text">工单处理</Text>
+          <Text className="app-btn-text">{t("wb.goTickets")}</Text>
         </Button>
         <Button className="app-btn wb-nav-btn wb-nav-btn-last" onClick={goInspections}>
-          <Text className="app-btn-text">巡检</Text>
+          <Text className="app-btn-text">{t("wb.goInspections")}</Text>
         </Button>
       </View>
 
       <View className="app-card">
         <View className="app-row">
-          <Text className="app-title">最新告警</Text>
+          <Text className="app-title">{t("wb.latestAlerts")}</Text>
           <Text className="app-sub" onClick={alerts.refresh}>
-            刷新
+            {t("wb.refresh")}
           </Text>
         </View>
-        {alertItems.length === 0 && <Text className="app-empty">暂无告警</Text>}
+        {alertItems.length === 0 && <Text className="app-empty">{t("wb.noAlerts")}</Text>}
         {alertItems
           .slice(-20)
           .reverse()
@@ -143,20 +145,20 @@ export default function WorkbenchPage() {
 
       <View className="app-card">
         <View className="app-row">
-          <Text className="app-title">最新工单</Text>
+          <Text className="app-title">{t("wb.latestTickets")}</Text>
           <Text className="app-sub" onClick={tickets.refresh}>
-            刷新
+            {t("wb.refresh")}
           </Text>
         </View>
-        {ticketItems.length === 0 && <Text className="app-empty">暂无工单</Text>}
+        {ticketItems.length === 0 && <Text className="app-empty">{t("wb.noTickets")}</Text>}
         {ticketItems
           .slice(-20)
           .reverse()
-          .map((t) => (
-            <View key={t.ticket_id} className="wb-item">
-              <Text className={t.priority === "P1" ? "app-tag-danger-text" : "app-tag-text"}>{t.priority}</Text>
-              <Text className="wb-item-title">{t.title}</Text>
-              <Text className="app-sub">{t.status}</Text>
+          .map((tk) => (
+            <View key={tk.ticket_id} className="wb-item">
+              <Text className={tk.priority === "P1" ? "app-tag-danger-text" : "app-tag-text"}>{tk.priority}</Text>
+              <Text className="wb-item-title">{tk.title}</Text>
+              <Text className="app-sub">{tk.status}</Text>
             </View>
           ))}
       </View>

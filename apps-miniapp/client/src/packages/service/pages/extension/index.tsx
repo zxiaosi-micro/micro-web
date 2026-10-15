@@ -6,8 +6,10 @@ import Taro from "@tarojs/taro";
 import type { ExtensionSkuView } from "@micro/shared/types/mobile-bff";
 import { createExtensionOrder, listExtensionSkus } from "../../../../api";
 import "./../warranty/index.scss";
+import { useThemePage } from "../../../../i18n";
 
 export default function ExtensionPage() {
+  const { t, rootClass } = useThemePage("page.extension");
   const [skus, setSkus] = useState<ExtensionSkuView[]>([]);
   const [baseWarranty, setBaseWarranty] = useState("");
   const [selected, setSelected] = useState<ExtensionSkuView | null>(null);
@@ -20,12 +22,12 @@ export default function ExtensionPage() {
     setBaseWarranty(params.warranty ?? "");
     listExtensionSkus()
       .then((r) => setSkus(r.list ?? []))
-      .catch((e) => setError(e instanceof Error ? e.message : "加载失败"));
+      .catch((e) => setError(e instanceof Error ? e.message : t("dev.loadFailed")));
   }, []);
 
   const submit = async (): Promise<void> => {
     if (!selected) {
-      setError("请先选择延保商品");
+      setError(t("ext.pickFirst"));
       return;
     }
     setSubmitting(true);
@@ -37,24 +39,24 @@ export default function ExtensionPage() {
       });
       setError("");
       Taro.showModal({
-        title: "下单成功",
-        content: `订单 ${r.order_no}\n金额 ¥${r.total_amount}\n支付链接（dev 模拟）：${r.pay_params}\n支付单号 ${r.payment_no}`,
+        title: t("ext.doneTitle"),
+        content: t("ext.doneContent", { no: r.order_no, amount: r.total_amount, url: r.pay_params, pay: r.payment_no }),
         showCancel: false,
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "下单失败");
+      setError(e instanceof Error ? e.message : t("ext.failed"));
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <View className="app-page">
+    <View className={`app-page ${rootClass}`}>
       {baseWarranty === "" && (
-        <Text className="app-empty">未指定衔接质保——请从设备详情进入以无缝衔接原质保</Text>
+        <Text className="app-empty">{t("ext.noBase")}</Text>
       )}
       {error !== "" && <Text className="app-error">{error}</Text>}
-      {skus.length === 0 && error === "" && <Text className="app-empty">暂无可售延保商品</Text>}
+      {skus.length === 0 && error === "" && <Text className="app-empty">{t("ext.empty")}</Text>}
       {skus.map((s) => (
         <View
           className="app-card"
@@ -74,7 +76,7 @@ export default function ExtensionPage() {
 
       {selected && (
         <View className="app-card">
-          <Text className="sv-title">购买数量</Text>
+          <Text className="sv-title">{t("ext.qty")}</Text>
           <View className="sv-qty">
             <View className="sv-qty-btn" onClick={() => setQty((q) => Math.max(1, q - 1))}>
               <Text>-</Text>
@@ -90,7 +92,7 @@ export default function ExtensionPage() {
             </View>
           </View>
           <Button className="sv-btn" loading={submitting} disabled={submitting} onClick={() => void submit()}>
-            提交订单并支付
+            {t("ext.submit")}
           </Button>
         </View>
       )}

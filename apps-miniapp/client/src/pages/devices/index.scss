@@ -14,7 +14,7 @@
 
 .dev-search-btn {
   margin-left: 16px;
-  background-color: #1f6feb;
+  background-color: var(--brand);
   border-radius: 8px;
   padding: 16px 28px;
 }
@@ -27,14 +27,14 @@
 /* 影子块 */
 .dev-shadow {
   margin-top: 16px;
-  background-color: #f7f8fa;
+  background-color: var(--input-bg);
   border-radius: 8px;
   padding: 16px 20px;
 }
 
 .dev-shadow-ts {
   font-size: 22px;
-  color: #86909c;
+  color: var(--text-sub);
 }
 
 .dev-metrics {
@@ -54,11 +54,11 @@
 .dev-metric-value {
   font-size: 28px;
   font-weight: bold;
-  color: #1f2329;
+  color: var(--text-title);
 }
 
 .dev-metric-key {
   font-size: 22px;
-  color: #86909c;
+  color: var(--text-sub);
   margin-top: 4px;
 }

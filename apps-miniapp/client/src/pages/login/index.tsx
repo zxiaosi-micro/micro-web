@@ -4,16 +4,19 @@ import { useEffect, useState } from "react";
 import Taro from "@tarojs/taro";
 import { Button, Input, Text, View } from "@tarojs/components";
 import { bindPhone, wxLogin } from "../../auth";
+import { useThemePage } from "../../i18n";
+import PrefsRow from "../../prefs-row";
 import "./index.scss";
 
 type Phase = "loading" | "bind" | "error";
 
 export default function Login() {
+  const { t, rootClass } = useThemePage("page.home");
   // 跳转原因（kicked=互斥踢下线 / reason=失效文案），只在首帧读一次
   const [notice] = useState(() => {
     const params = Taro.getCurrentInstance().router?.params;
     if (params?.kicked === "1") {
-      return params.reason ?? "账号已在其他小程序端登录，请重新登录";
+      return params.reason ?? t("login.kicked");
     }
     return params?.reason ?? "";
   });
@@ -41,14 +44,14 @@ export default function Login() {
       return;
     }
     setPhase("error");
-    setMessage(r.message ?? "登录失败，请重试");
+    setMessage(r.message ?? t("login.failed"));
   }
 
   /** 绑定手机号：Taro.login 取新 code → /auth/wx-bind-phone → 签发 tokens */
   async function onSubmitPhone(): Promise<void> {
     const trimmed = phone.trim();
     if (!/^1\d{10}$/.test(trimmed)) {
-      Taro.showToast({ title: "请输入 11 位手机号", icon: "none" });
+      Taro.showToast({ title: t("login.phoneInvalid"), icon: "none" });
       return;
     }
     setSubmitting(true);
@@ -58,14 +61,14 @@ export default function Login() {
       void Taro.reLaunch({ url: "/pages/index/index" });
       return;
     }
-    setMessage(r.message ?? "绑定失败，请重试");
+    setMessage(r.message ?? t("login.bindFailed"));
   }
 
   return (
-    <View className="app-page">
+    <View className={`app-page ${rootClass}`}>
       <View className="app-card login-hero">
-        <Text className="app-title">电池管家</Text>
-        <Text className="app-sub">设备激活 · 影子监控 · 质保延保 · 售后报修</Text>
+        <Text className="app-title">{t("app.brand")}</Text>
+        <Text className="app-sub">{t("login.heroSub")}</Text>
       </View>
 
       {notice !== "" && (
@@ -74,36 +77,38 @@ export default function Login() {
         </View>
       )}
 
-      {phase === "loading" && <Text className="app-loading">正在微信登录…</Text>}
+      {phase === "loading" && <Text className="app-loading">{t("login.wxLoading")}</Text>}
 
       {phase === "bind" && (
         <View className="app-card">
-          <Text className="app-title">绑定手机号</Text>
-          <Text className="app-sub">首次微信登录需绑定手机号完成注册（dev MOCKWX 任意 11 位号码）</Text>
+          <Text className="app-title">{t("login.bindTitle")}</Text>
+          <Text className="app-sub">{t("login.bindSub")}</Text>
           <Input
             className="app-input"
             type="number"
             maxlength={11}
-            placeholder="请输入手机号"
+            placeholder={t("login.phonePlaceholder")}
             value={phone}
             onInput={(e) => setPhone(e.detail.value)}
           />
           {message !== "" && <Text className="app-error">{message}</Text>}
           <Button className="login-submit" disabled={submitting} onClick={() => void onSubmitPhone()}>
-            {submitting ? "绑定中…" : "绑定并登录"}
+            {submitting ? t("login.binding") : t("login.bindSubmit")}
           </Button>
         </View>
       )}
 
       {phase === "error" && (
         <View className="app-card">
-          <Text className="app-title">登录失败</Text>
+          <Text className="app-title">{t("login.failedTitle")}</Text>
           {message !== "" && <Text className="app-error">{message}</Text>}
           <Button className="login-submit" onClick={() => void runLogin()}>
-            重试
+            {t("login.retry")}
           </Button>
         </View>
       )}
+
+      <PrefsRow />
     </View>
   );
 }

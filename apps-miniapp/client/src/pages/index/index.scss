@@ -3,7 +3,7 @@
 /* 扫码主按钮（覆盖 Button 原生边框） */
 .index-scan {
   margin-top: 24px;
-  background-color: #1f6feb;
+  background-color: var(--brand);
   border-radius: 8px;
   color: #ffffff;
   font-size: 28px;
@@ -15,7 +15,7 @@
 
 /* 跳转链接 */
 .index-link {
-  color: #1f6feb;
+  color: var(--brand);
   font-size: 26px;
 }
 
@@ -29,7 +29,7 @@
 
 .index-grid-item {
   width: 48%;
-  background-color: #ffffff;
+  background-color: var(--card-bg);
   border-radius: 12px;
   padding: 28px 24px;
   margin-bottom: 20px;
@@ -40,11 +40,11 @@
 .index-grid-title {
   font-size: 30px;
   font-weight: bold;
-  color: #1f2329;
+  color: var(--text-title);
 }
 
 .index-grid-sub {
   font-size: 24px;
-  color: #86909c;
+  color: var(--text-sub);
   margin-top: 8px;
 }

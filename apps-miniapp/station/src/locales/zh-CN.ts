@@ -1,0 +1,108 @@
+// locales/zh-CN.ts · station 小程序中文词条（正本；en-US.ts 以 satisfies 同型约束）。
+
+const zh = {
+  // ── 页面标题（useThemePage 同步导航栏） ──
+  "page.login": "场站小程序",
+  "page.workbench": "场站工作台",
+  "page.alerts": "告警处理",
+  "page.tickets": "工单处理",
+  "page.inspections": "巡检",
+
+  // ── 工作台 ──
+  "wb.loadingStation": "场站加载中…",
+  "wb.loadingMe": "正在获取驻站身份…",
+  "wb.unreadAlerts": "未读告警（10s 增量）",
+  "wb.activeTickets": "活跃工单（10s 增量）",
+  "wb.goAlerts": "告警处理",
+  "wb.goTickets": "工单处理",
+  "wb.goInspections": "巡检",
+  "wb.latestAlerts": "最新告警",
+  "wb.latestTickets": "最新工单",
+  "wb.refresh": "刷新",
+  "wb.noAlerts": "暂无告警",
+  "wb.noTickets": "暂无工单",
+
+  // ── 登录 ──
+  "login.subtitle": "场站人员专用（data_scope 锁定本场站）",
+  "login.mobile": "手机号",
+  "login.password": "密码",
+  "login.mobilePlaceholder": "请输入手机号",
+  "login.passwordPlaceholder": "请输入密码",
+  "login.needBoth": "请输入手机号与密码",
+  "login.expired": "登录状态已失效，请重新登录",
+  "login.lockedRetry": "账号已锁定，剩余 {{seconds}} 秒后可重试",
+  "login.locked": "已锁定（{{seconds}}s）",
+  "login.failed": "登录失败",
+
+  // ── 告警 ──
+  "al.stOpen": "未确认",
+  "al.stAcked": "已确认",
+  "al.stClosed": "已关闭",
+  "al.all": "全部",
+  "al.empty": "暂无告警",
+  "al.ack": "确认",
+  "al.ackDone": "已确认",
+  "al.ackFailed": "确认失败",
+  "al.toTicket": "转工单",
+  "al.transferTitle": "告警转工单",
+  "al.autoDispatch": "建单后自动派单（区域+技能匹配）",
+  "al.generate": "生成",
+  "al.generateAuto": "生成（自动派单）",
+  "al.generated": "已生成工单 {{no}}{{auto}}",
+  "al.generatedAuto": "并自动派单",
+  "al.transferFailed": "转工单失败",
+
+  // ── 工单 ──
+  "tk.stDispatched": "待接单",
+  "tk.stAccepted": "已接单",
+  "tk.stProcessing": "处理中",
+  "tk.stSubmitted": "待验收",
+  "tk.all": "全部",
+  "tk.empty": "暂无工单",
+  "tk.assignee": "受理人",
+  "tk.escalate": "升级",
+  "tk.actFailed": "操作失败",
+  "tk.accept": "接单",
+  "tk.accepted": "已接单",
+  "tk.start": "开工",
+  "tk.started": "已开工",
+  "tk.submit": "提交",
+  "tk.submitted": "已提交",
+  "tk.submitTitle": "提交处理结果：{{no}}",
+  "tk.resultPlaceholder": "处理结果说明",
+
+  // ── 巡检 ──
+  "ins.stPending": "待执行",
+  "ins.all": "全部",
+  "ins.item1": "外观检查",
+  "ins.item2": "连接紧固",
+  "ins.item3": "异味异响",
+  "ins.empty": "暂无巡检任务",
+  "ins.anomaly": "异常 {{count}}",
+  "ins.plan": "计划",
+  "ins.batchSubmit": "批量提交",
+  "ins.batchTitle": "巡检批量提交：{{title}}",
+  "ins.loadingDetail": "正在获取巡检明细…",
+  "ins.result": "结果",
+  "ins.switchHint": "开关打开=该项异常（提交后服务端自动生成工单）",
+  "ins.location": "定位",
+  "ins.noLocation": "未获取（gcj02）",
+  "ins.getLocation": "获取定位",
+  "ins.submit": "提交巡检",
+  "ins.submitted": "巡检已提交",
+  "ins.submittedContent": "异常 {{count}} 项{{tickets}}",
+  "ins.submittedTickets": "，已生成工单：{{tickets}}",
+  "ins.planTime": "计划时刻",
+  "ins.anomalous": "异常（生成工单）",
+  "ins.submitFailed": "提交失败",
+
+  // ── 偏好设置 ──
+  "prefs.section": "偏好设置",
+  "prefs.language": "语言",
+  "prefs.theme": "深色模式",
+  "prefs.themeOn": "开启",
+  "prefs.themeOff": "关闭",
+};
+
+export type StationMiniMessages = typeof zh;
+export default zh;

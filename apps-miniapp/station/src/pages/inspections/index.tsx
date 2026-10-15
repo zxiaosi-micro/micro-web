@@ -9,19 +9,21 @@ import type { InspectionTaskGetResp, InspectionTaskView } from "@micro/shared/ty
 import { ensureStationMe } from "../../auth";
 import { getInspectionTask, listInspectionTasks, submitInspection } from "../../api";
 import { usePolling } from "../../polling";
+import { useThemePage } from "../../i18n";
 import { formatTs } from "../../time";
 import "./index.scss";
 
-const STATUS_CHIPS: { value: string; label: string }[] = [
-  { value: "PENDING", label: "待执行" },
-  { value: "", label: "全部" },
+const STATUS_CHIPS: { value: string; labelKey: string }[] = [
+  { value: "PENDING", labelKey: "ins.stPending" },
+  { value: "", labelKey: "ins.all" },
 ];
 
 /** 拍照上限（占位阶段本机路径，接 file 服务上传后仍以此约束张数） */
 const MAX_PHOTOS = 3;
 
 /** 提交前明细为空时的默认日巡 schema 兜底（station_created 自动建计划的模板口径，同场站 Web） */
-const DEFAULT_ITEM_NAMES = ["外观检查", "连接紧固", "异味异响"];
+// 默认日巡 schema 词条 key（渲染期 t() 翻译；兜底口径同场站 Web）
+const DEFAULT_ITEM_KEYS = ["ins.item1", "ins.item2", "ins.item3"];
 
 interface ItemValue {
   result: string;
@@ -31,6 +33,7 @@ interface ItemValue {
 const EMPTY_LIST = { total: 0, list: [] as InspectionTaskView[] };
 
 export default function InspectionsPage() {
+  const { t, rootClass } = useThemePage("page.inspections");
   const [stationId, setStationId] = useState("");
   const [status, setStatus] = useState("PENDING");
   // 表单面板目标（小程序用自绘底部面板替代 Modal）
@@ -80,10 +83,10 @@ export default function InspectionsPage() {
         const items =
           out.items && out.items.length > 0
             ? out.items
-            : DEFAULT_ITEM_NAMES.map((name, i) => ({
+            : DEFAULT_ITEM_KEYS.map((key, i) => ({
                 item_id: String(i),
                 task_id: out.task?.task_id ?? taskId,
-                name,
+                name: t(key),
                 result: "",
                 anomalous: false,
                 ticket_id: "0",
@@ -151,20 +154,20 @@ export default function InspectionsPage() {
       );
       setSubmitting(false);
       await Taro.showModal({
-        title: "巡检已提交",
-        content: `异常 ${out.anomaly_count} 项${out.ticket_ids ? `，已生成工单：${out.ticket_ids}` : ""}`,
+        title: t("ins.submitted"),
+        content: t("ins.submittedContent", { count: out.anomaly_count, tickets: out.ticket_ids ? t("ins.submittedTickets", { tickets: out.ticket_ids }) : "" }),
         showCancel: false,
       });
       setActiveTask(null);
       tasks.refresh();
     } catch (e) {
       setSubmitting(false);
-      Taro.showToast({ title: e instanceof Error ? e.message : "提交失败", icon: "none" });
+      Taro.showToast({ title: e instanceof Error ? e.message : t("ins.submitFailed"), icon: "none" });
     }
   };
 
   return (
-    <View className="app-page">
+    <View className={`app-page ${rootClass}`}>
       <View className="ins-chips">
         {STATUS_CHIPS.map((c) => (
           <View
@@ -172,31 +175,31 @@ export default function InspectionsPage() {
             className={`app-chip ${status === c.value ? "app-chip-active" : ""}`}
             onClick={() => setStatus(c.value)}
           >
-            <Text className={`app-chip-text ${status === c.value ? "app-chip-active-text" : ""}`}>{c.label}</Text>
+            <Text className={`app-chip-text ${status === c.value ? "app-chip-active-text" : ""}`}>{t(c.labelKey)}</Text>
           </View>
         ))}
       </View>
 
       {tasks.error && <Text className="app-error">{tasks.error.message}</Text>}
-      {(tasks.data?.list ?? []).length === 0 && !tasks.loading && <Text className="app-empty">暂无巡检任务</Text>}
-      {(tasks.data?.list ?? []).map((t) => (
-        <View key={t.task_id} className="ins-item">
+      {(tasks.data?.list ?? []).length === 0 && !tasks.loading && <Text className="app-empty">{t("ins.empty")}</Text>}
+      {(tasks.data?.list ?? []).map((tk) => (
+        <View key={tk.task_id} className="ins-item">
           <View className="ins-item-head">
-            <Text className="ins-item-title">{t.title}</Text>
-            {t.anomaly_count > 0 && (
+            <Text className="ins-item-title">{tk.title}</Text>
+            {tk.anomaly_count > 0 && (
               <View className="app-badge">
-                <Text className="app-badge-text">异常 {t.anomaly_count}</Text>
+                <Text className="app-badge-text">{t("ins.anomaly", { count: tk.anomaly_count })}</Text>
               </View>
             )}
           </View>
           <View className="ins-item-meta">
-            <Text className="app-sub">计划 {formatTs(t.scheduled_for)}</Text>
-            <Text className="app-sub">{t.status}</Text>
+            <Text className="app-sub">{t("ins.plan")} {formatTs(tk.scheduled_for)}</Text>
+            <Text className="app-sub">{tk.status}</Text>
           </View>
-          {t.status === "PENDING" && (
+          {tk.status === "PENDING" && (
             <View className="ins-actions">
-              <Button className="app-btn ins-actions-btn" onClick={() => setActiveTask(t)}>
-                <Text className="app-btn-text">批量提交</Text>
+              <Button className="app-btn ins-actions-btn" onClick={() => setActiveTask(tk)}>
+                <Text className="app-btn-text">{t("ins.batchSubmit")}</Text>
               </Button>
             </View>
           )}
@@ -206,8 +209,8 @@ export default function InspectionsPage() {
       {activeTask !== null && (
         <View className="app-mask" onClick={() => setActiveTask(null)}>
           <View className="app-panel" onClick={(e) => e.stopPropagation()}>
-            <Text className="app-title">巡检批量提交：{activeTask.title}</Text>
-            {!detail && <Text className="app-empty">正在获取巡检明细…</Text>}
+            <Text className="app-title">{t("ins.batchTitle", { title: activeTask.title })}</Text>
+            {!detail && <Text className="app-empty">{t("ins.loadingDetail")}</Text>}
             {detail !== null &&
               detail.items.map((it) => {
                 const v = values[it.item_id] ?? { result: "", anomalous: false };
@@ -218,7 +221,7 @@ export default function InspectionsPage() {
                       className="app-input ins-form-input"
                       value={v.result}
                       onInput={(e) => setValues({ ...values, [it.item_id]: { ...v, result: e.detail.value } })}
-                      placeholder="结果"
+                      placeholder={t("ins.result")}
                     />
                     <View className="ins-form-switch">
                       <Switch
@@ -229,15 +232,15 @@ export default function InspectionsPage() {
                   </View>
                 );
               })}
-            {detail !== null && <Text className="app-sub">开关打开=该项异常（提交后服务端自动生成工单）</Text>}
+            {detail !== null && <Text className="app-sub">{t("ins.switchHint")}</Text>}
 
             <View className="ins-form-row">
-              <Text className="ins-form-name">定位</Text>
+              <Text className="ins-form-name">{t("ins.location")}</Text>
               <Text className="app-sub" style={{ flex: 1, marginLeft: "16rpx" }}>
-                {location || "未获取（gcj02）"}
+                {location || t("ins.noLocation")}
               </Text>
               <Button className="app-btn-plain ins-actions-btn" onClick={() => void onGetLocation()}>
-                <Text className="app-btn-plain-text">获取定位</Text>
+                <Text className="app-btn-plain-text">{t("ins.getLocation")}</Text>
               </Button>
             </View>
 

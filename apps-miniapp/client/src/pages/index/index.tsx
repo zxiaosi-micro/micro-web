@@ -5,6 +5,7 @@ import { Button, Text, View } from "@tarojs/components";
 import type { CustomerMeResp } from "@micro/shared/types/mobile-bff";
 import { activateDevice, listDevices, listMessages } from "../../api";
 import { cachedMe, isLoggedIn } from "../../auth";
+import { useThemePage } from "../../i18n";
 import { usePolling } from "../../polling";
 import { requestAlertSubscribe } from "../../subscribe";
 import "./index.scss";
@@ -16,6 +17,7 @@ interface HomeSummary {
 }
 
 export default function Index() {
+  const { t, rootClass } = useThemePage("page.home");
   const [me, setMe] = useState<CustomerMeResp | null>(null);
 
   const summary = usePolling<HomeSummary>(
@@ -53,21 +55,21 @@ export default function Index() {
         return;
       }
       const conf = await Taro.showModal({
-        title: "激活设备",
-        content: `SN：${sn}\n确认激活并绑定到我的档案？激活后质保即时起算。`,
+        title: t("scan.confirmTitle"),
+        content: t("scan.confirmContent", { sn }),
       });
       if (!conf.confirm) {
         return;
       }
       await activateDevice({ sn });
-      Taro.showToast({ title: "激活成功", icon: "success" });
+      Taro.showToast({ title: t("scan.done"), icon: "success" });
       summary.refresh();
     } catch (e) {
       const raw = e instanceof Error ? `${e.message}` : String(e ?? "");
       if (raw.includes("cancel")) {
         return; // 用户取消扫码
       }
-      Taro.showToast({ title: raw || "激活失败", icon: "none" });
+      Taro.showToast({ title: raw || t("scan.failed"), icon: "none" });
     }
   }
 
@@ -75,32 +77,32 @@ export default function Index() {
   const deviceTotal = summary.data?.deviceTotal;
 
   return (
-    <View className="app-page">
+    <View className={`app-page ${rootClass}`}>
       <View className="app-card">
-        <Text className="app-title">您好，{me?.nickname ?? "微信用户"}</Text>
+        <Text className="app-title">{t("home.hello", { name: me?.nickname ?? t("home.guest") })}</Text>
         <Text className="app-sub">
-          {me?.has_party && me.party ? `${me.party.name} · ` : ""}绑定后可查看名下设备、质保与售后进度
+          {me?.has_party && me.party ? `${me.party.name} · ` : ""}{t("home.heroSub")}
         </Text>
       </View>
 
       <View className="app-card">
         <View className="app-row">
-          <Text className="app-title">设备摘要</Text>
+          <Text className="app-title">{t("home.summary")}</Text>
           <Text className="index-link" onClick={() => Taro.navigateTo({ url: "/pages/devices/index" })}>
-            全部 ›
+            {t("common.viewAll")}
           </Text>
         </View>
         <Text className="app-sub">
-          共 {deviceTotal === undefined ? "…" : `${deviceTotal} 台`}设备 · 扫码激活新设备后自动纳入我的档案
+          {deviceTotal === undefined ? t("home.devicePending") : t("home.deviceLine", { count: deviceTotal })}
         </Text>
         <Button className="index-scan" onClick={() => void onScanActivate()}>
-          扫码激活设备
+          {t("home.scan")}
         </Button>
       </View>
 
       <View className="app-card">
         <View className="app-row">
-          <Text className="app-title">消息</Text>
+          <Text className="app-title">{t("home.messages")}</Text>
           {unread > 0 && (
             <View className="app-badge">
               <Text className="app-badge-text">{unread > 99 ? "99+" : unread}</Text>
@@ -108,29 +110,29 @@ export default function Index() {
           )}
         </View>
         <View className="app-btn-plain" onClick={() => Taro.navigateTo({ url: "/packages/profile/pages/messages/index" })}>
-          <Text className="app-btn-plain-text">{unread > 0 ? `查看消息（${unread} 条未读）` : "查看消息"}</Text>
+          <Text className="app-btn-plain-text">{unread > 0 ? t("home.viewMessagesUnread", { count: unread }) : t("home.viewMessages")}</Text>
         </View>
         <View className="app-btn-plain" onClick={() => void requestAlertSubscribe()}>
-          <Text className="app-btn-plain-text">开启告警提醒订阅</Text>
+          <Text className="app-btn-plain-text">{t("home.subscribe")}</Text>
         </View>
       </View>
 
       <View className="index-grid">
         <View className="index-grid-item" onClick={() => Taro.navigateTo({ url: "/pages/devices/index" })}>
-          <Text className="index-grid-title">我的设备</Text>
-          <Text className="index-grid-sub">影子/质保</Text>
+          <Text className="index-grid-title">{t("home.gdDevices")}</Text>
+          <Text className="index-grid-sub">{t("home.gdDevicesSub")}</Text>
         </View>
         <View className="index-grid-item" onClick={() => Taro.navigateTo({ url: "/packages/station/pages/list/index" })}>
-          <Text className="index-grid-title">我的场站</Text>
-          <Text className="index-grid-sub">聚合监控</Text>
+          <Text className="index-grid-title">{t("home.gdStations")}</Text>
+          <Text className="index-grid-sub">{t("home.gdStationsSub")}</Text>
         </View>
         <View className="index-grid-item" onClick={() => Taro.navigateTo({ url: "/packages/service/pages/warranty/index" })}>
-          <Text className="index-grid-title">质保服务</Text>
-          <Text className="index-grid-sub">质保/延保</Text>
+          <Text className="index-grid-title">{t("home.gdWarranty")}</Text>
+          <Text className="index-grid-sub">{t("home.gdWarrantySub")}</Text>
         </View>
         <View className="index-grid-item" onClick={() => Taro.navigateTo({ url: "/packages/service/pages/tickets/index" })}>
-          <Text className="index-grid-title">售后工单</Text>
-          <Text className="index-grid-sub">报修/进度</Text>
+          <Text className="index-grid-title">{t("home.gdTickets")}</Text>
+          <Text className="index-grid-sub">{t("home.gdTicketsSub")}</Text>
         </View>
       </View>
     </View>

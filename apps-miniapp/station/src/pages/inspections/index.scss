@@ -7,7 +7,7 @@
 }
 
 .ins-item {
-  background-color: #ffffff;
+  background-color: var(--card-bg);
   border-radius: 12rpx;
   padding: 24rpx;
   margin-bottom: 16rpx;
@@ -23,7 +23,7 @@
   flex: 1;
   font-size: 28rpx;
   font-weight: bold;
-  color: #1f2329;
+  color: var(--text-title);
   margin-left: 12rpx;
 }
 
@@ -57,7 +57,7 @@
 .ins-form-name {
   width: 160rpx;
   font-size: 26rpx;
-  color: #1f2329;
+  color: var(--text-title);
 }
 
 .ins-form-input {
@@ -95,7 +95,7 @@
   line-height: 36rpx;
   text-align: center;
   border-radius: 20rpx;
-  background-color: #f53f3f;
+  background-color: var(--danger-text);
   color: #ffffff;
   font-size: 24rpx;
 }

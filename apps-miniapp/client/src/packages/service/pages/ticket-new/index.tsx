@@ -6,8 +6,10 @@ import type { CustomerDeviceItem } from "@micro/shared/types/mobile-bff";
 import { createTicket, listDevices } from "../../../../api";
 import { requestAlertSubscribe } from "../../../../subscribe";
 import "./../warranty/index.scss";
+import { useThemePage } from "../../../../i18n";
 
 export default function TicketNewPage() {
+  const { t, rootClass } = useThemePage("page.ticketNew");
   const [devices, setDevices] = useState<CustomerDeviceItem[]>([]);
   const [deviceId, setDeviceId] = useState("");
   const [sn, setSn] = useState("");
@@ -26,7 +28,7 @@ export default function TicketNewPage() {
     } else {
       listDevices({ page: 1, size: 50 })
         .then((r) => setDevices(r.list ?? []))
-        .catch((e) => setError(e instanceof Error ? e.message : "设备列表加载失败"));
+        .catch((e) => setError(e instanceof Error ? e.message : t("tk.deviceListFailed")));
     }
   }, []);
 
@@ -41,7 +43,7 @@ export default function TicketNewPage() {
 
   const submit = async (): Promise<void> => {
     if (title.trim() === "" || (deviceId === "" && sn.trim() === "")) {
-      setError("请填写标题并选择设备");
+      setError(t("tk.needTitle"));
       return;
     }
     setSubmitting(true);
@@ -56,25 +58,25 @@ export default function TicketNewPage() {
       // 报修提交成功 → 订阅消息授权（告警/工单提醒模板，04 §3 F2 用户侧申请后生效）
       void requestAlertSubscribe();
       Taro.showModal({
-        title: "报修已受理",
-        content: `工单号 ${r.ticket_no}，可在"售后进度"中查看处理进展。`,
+        title: t("tk.acceptedTitle"),
+        content: t("tk.acceptedContent", { no: r.ticket_no }),
         showCancel: false,
         success: () => Taro.redirectTo({ url: "/packages/service/pages/tickets/index" }),
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "提交失败");
+      setError(e instanceof Error ? e.message : t("tk.submitFailed"));
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <View className="app-page">
+    <View className={`app-page ${rootClass}`}>
       {error !== "" && <Text className="app-error">{error}</Text>}
 
       {deviceId === "" && (
         <View className="app-card">
-          <Text className="sv-title">选择设备</Text>
+          <Text className="sv-title">{t("tk.pickDevice")}</Text>
           {deviceOpen ? (
             devices.map((d) => (
               <View
@@ -91,40 +93,40 @@ export default function TicketNewPage() {
             ))
           ) : (
             <View className="sv-pick" onClick={() => setDeviceOpen(true)}>
-              {sn || "点击选择设备 ›"}
+              {sn || t("tk.pickHint")}
             </View>
           )}
         </View>
       )}
 
       <View className="app-card">
-        <Text className="sv-title">故障描述</Text>
+        <Text className="sv-title">{t("tk.faultSection")}</Text>
         <Input
           className="sv-input"
-          placeholder="标题（如：无法充电）"
+          placeholder={t("tk.titlePlaceholder")}
           value={title}
           onInput={(e) => setTitle(e.detail.value)}
           style={{ marginTop: "16px" }}
         />
         <Textarea
           className="sv-textarea"
-          placeholder="故障现象、发生时间等（选填）"
+          placeholder={t("tk.contentPlaceholder")}
           value={content}
           onInput={(e) => setContent(e.detail.value)}
           style={{ marginTop: "16px" }}
         />
         <View style={{ marginTop: "16px" }}>
           <View className="sv-photo" onClick={pickPhoto}>
-            拍照/选图（{photos.length}/3）
+            {t("tk.photo", { count: photos.length })}
           </View>
           {photos.map((p) => (
             <Text className="sv-meta" key={p}>
-              已选图片
+              {t("tk.photoPicked")}
             </Text>
           ))}
         </View>
         <Button className="sv-btn" loading={submitting} disabled={submitting} onClick={() => void submit()}>
-          提交报修
+          {t("tk.submit")}
         </Button>
       </View>
     </View>
