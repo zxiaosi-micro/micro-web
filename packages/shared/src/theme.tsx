@@ -1,13 +1,24 @@
-// theme.tsx · 三端 Web 共用设计系统：品牌主题工厂 + 路由过渡 + 数字滚动 + 指标卡。
+// theme.tsx · 三端 Web 共用设计系统：品牌主题工厂 + 路由过渡 + 数字滚动 + 指标卡 + 偏好切换器。
 //
 // 仅 Web 端经子路径 `@micro/shared/theme` 引用（不进 index.ts）——小程序端
 // （Taro/React 18.3）不拖 antd 依赖。动画本体在 theme.css，此处只提供
 // token 工厂与少量组件；零第三方依赖（动画全 CSS 实现）。
 
-import { Card, Statistic } from "antd";
+import { Card, Statistic, theme as antdTheme } from "antd";
 import type { ThemeConfig } from "antd";
 import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
+import {
+  LOCALES,
+  LOCALE_LABEL,
+  getLocale,
+  getTheme,
+  setLocale,
+  setTheme,
+  t,
+  usePrefs,
+  type ThemeMode,
+} from "./prefs";
 
 /** 品牌三元组：主色（antd token）/ 渐变（侧栏·大标题·按钮）/ 光晕（阴影用） */
 export interface Brand {
@@ -25,19 +36,22 @@ export function brandStyle(b: Brand): CSSProperties {
   } as CSSProperties;
 }
 
-/** antd 主题工厂：圆角/布局/表格/菜单全局调性（深色菜单选中态的品牌光晕在 theme.css 覆盖） */
-export function brandTheme(b: Brand): ThemeConfig {
+/** antd 主题工厂：圆角/布局/表格/菜单全局调性（mode=dark 走 darkAlgorithm + 深色 token；
+ * theme.css 的 html[data-theme=dark] 覆盖非 antd 面——两处需同步切） */
+export function brandTheme(b: Brand, mode: ThemeMode = "light"): ThemeConfig {
+  const dark = mode === "dark";
   return {
+    algorithm: dark ? antdTheme.darkAlgorithm : undefined,
     token: {
       colorPrimary: b.colorPrimary,
       colorLink: b.colorPrimary,
       borderRadius: 10,
-      colorBgLayout: "#f4f6fa",
+      colorBgLayout: dark ? "#0b1220" : "#f4f6fa",
       fontFamily:
         "-apple-system, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif",
     },
     components: {
-      Layout: { headerBg: "transparent", siderBg: "transparent", bodyBg: "#f4f6fa" },
+      Layout: { headerBg: "transparent", siderBg: "transparent", bodyBg: dark ? "#0b1220" : "#f4f6fa" },
       Menu: {
         itemHeight: 42,
         itemBorderRadius: 10,
@@ -51,14 +65,59 @@ export function brandTheme(b: Brand): ThemeConfig {
         horizontalItemSelectedColor: b.colorPrimary,
       },
       Table: {
-        headerBg: "#f7f9fd",
-        headerColor: "#475569",
+        headerBg: dark ? "#111a2c" : "#f7f9fd",
+        headerColor: dark ? "rgba(255,255,255,0.65)" : "#475569",
         headerSplitColor: "transparent",
-        rowHoverBg: "#f5f8ff",
+        rowHoverBg: dark ? "#16213a" : "#f5f8ff",
       },
       Card: { borderRadiusLG: 14 },
     },
   };
+}
+
+/** 偏好 → html 属性同步（data-theme 驱动 theme.css 变量切换；lang 供浏览器/无障碍口径）。
+ * configureI18n 的 onChange 与启动时各调一次；FOUC 兜底由 index.html 内联脚本承担。 */
+export function applyHtmlPrefs(): void {
+  if (typeof document === "undefined") {
+    return;
+  }
+  document.documentElement.dataset.theme = getTheme();
+  document.documentElement.lang = getLocale() === "en-US" ? "en" : "zh-CN";
+}
+
+/** 偏好切换器（ProLayout actionsRender / 登录页右上角挂载）：语言 + 亮暗主题。
+ * 样式走 theme.css 的 .pref-switcher；文案在 prefs-common（prefs.*）。 */
+export function PrefSwitcher(): ReactNode {
+  const { locale, theme } = usePrefs();
+  // 语言按钮显示"目标语言"（点击即切过去），主题按钮显示当前档位图标
+  const nextLocale = LOCALES.find((l) => l !== locale) ?? "en-US";
+  return (
+    <div className="pref-switcher">
+      <button
+        type="button"
+        className="pref-btn"
+        title={t("prefs.language")}
+        onClick={() => setLocale(nextLocale)}
+      >
+        {LOCALE_LABEL[nextLocale]}
+      </button>
+      <button
+        type="button"
+        className="pref-btn"
+        title={t("prefs.theme")}
+        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      >
+        {theme === "dark" ? "☀" : "☾"}
+      </button>
+    </div>
+  );
+}
+
+/** document.title 随语言同步（各端 RootProviders 挂载；titleText 传 t("app.title") 类全值） */
+export function useDocumentTitle(titleText: string): void {
+  useEffect(() => {
+    document.title = titleText;
+  }, [titleText]);
 }
 
 /** 路由切换过渡：key=route，每次挂载播放进场动画（theme.css .page-enter） */

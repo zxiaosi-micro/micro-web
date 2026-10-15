@@ -9,6 +9,7 @@
     ".": "./src/index.ts",
     "./theme": "./src/theme.tsx",
     "./theme.css": "./src/theme.css",
+    "./prefs": "./src/prefs.tsx",
     "./types": "./types/index.ts",
     "./types/*": "./types/*"
   },

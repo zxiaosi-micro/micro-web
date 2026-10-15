@@ -1,14 +1,52 @@
-/* theme.css · 三端 Web 共用设计系统（品牌变量 + 动画 + 移动端适配）。
+/* theme.css · 三端 Web 共用设计系统（品牌变量 + 动画 + 移动端适配 + 亮暗主题变量）。
  *
  * 布局壳由 ProLayout 承担，此处聚焦：
  *   品牌变量（--brand / --brand-grad / --brand-glow，由 brandStyle() 挂载）
+ *   主题变量（--bg-page 等，:root 亮色默认，html[data-theme="dark"] 覆盖——
+ *   与 antd darkAlgorithm 由 brandTheme(mode) 同步切换，两处色值需成对维护）
  *   路由/卡片进场动画、登录页光斑、大屏效果、移动端兜底。
  */
+
+/* ── 主题变量（亮色默认） ── */
+:root {
+  --bg-page: #f4f6fa;
+  --text-title: #1e293b;
+  --text-sub: #94a3b8;
+  --hover-bg: #f1f5f9;
+  --scrollbar-thumb: rgba(100, 116, 139, 0.3);
+  --scrollbar-thumb-hover: rgba(100, 116, 139, 0.5);
+  --login-bg: linear-gradient(135deg, #eef3fb 0%, #e7edfa 45%, #f1eefa 100%);
+  --login-card-bg: rgba(255, 255, 255, 0.86);
+  --login-card-border: rgba(255, 255, 255, 0.6);
+  --login-card-shadow: 0 24px 60px rgba(15, 32, 67, 0.16);
+  --pref-bg: rgba(255, 255, 255, 0.72);
+  --pref-text: #475569;
+  --pref-border: rgba(15, 32, 67, 0.12);
+  --pref-hover-bg: rgba(47, 107, 255, 0.08);
+}
+
+/* ── 主题变量（暗色覆盖；色板与 brandTheme dark token 同源） ── */
+html[data-theme="dark"] {
+  --bg-page: #0b1220;
+  --text-title: #e2e8f0;
+  --text-sub: #7c8aa5;
+  --hover-bg: rgba(255, 255, 255, 0.06);
+  --scrollbar-thumb: rgba(148, 163, 184, 0.28);
+  --scrollbar-thumb-hover: rgba(148, 163, 184, 0.45);
+  --login-bg: linear-gradient(135deg, #0a1122 0%, #0c1730 45%, #101d3a 100%);
+  --login-card-bg: rgba(19, 27, 45, 0.88);
+  --login-card-border: rgba(148, 163, 184, 0.16);
+  --login-card-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  --pref-bg: rgba(255, 255, 255, 0.06);
+  --pref-text: #c3cdd9;
+  --pref-border: rgba(148, 163, 184, 0.25);
+  --pref-hover-bg: rgba(76, 141, 255, 0.15);
+}
 
 /* ── 全局基调 ── */
 html,
 body {
-  background: #f4f6fa;
+  background: var(--bg-page);
 }
 body {
   -webkit-font-smoothing: antialiased;
@@ -18,18 +56,18 @@ body {
 /* 细滚动条 */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(100, 116, 139, 0.35) transparent;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.3);
+  background: var(--scrollbar-thumb);
   border-radius: 8px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.5);
+  background: var(--scrollbar-thumb-hover);
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -202,12 +240,40 @@ body {
     transform 0.2s ease;
 }
 .quick-link:hover {
-  background: #f1f5f9;
+  background: var(--hover-bg);
   transform: translateX(4px);
 }
 .quick-link .anticon {
   color: var(--brand, #2f6bff);
   font-size: 16px;
+}
+
+/* ── 偏好切换器（PrefSwitcher；挂 ProLayout 头部与登录页右上角） ── */
+.pref-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pref-btn {
+  min-width: 30px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--pref-border);
+  border-radius: 14px;
+  background: var(--pref-bg);
+  color: var(--pref-text);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+.pref-btn:hover {
+  background: var(--pref-hover-bg);
+  color: var(--brand, #2f6bff);
+  border-color: var(--brand, #2f6bff);
 }
 
 /* ── 登录页（login-bg + 光斑 + 玻璃卡） ── */
@@ -218,7 +284,7 @@ body {
   place-items: center;
   overflow: hidden;
   padding: 16px;
-  background: linear-gradient(135deg, #eef3fb 0%, #e7edfa 45%, #f1eefa 100%);
+  background: var(--login-bg);
 }
 .login-blob {
   position: absolute;
@@ -258,11 +324,11 @@ body {
   z-index: 1;
   width: min(400px, 100%);
   border-radius: 20px;
-  box-shadow: 0 24px 60px rgba(15, 32, 67, 0.16);
-  background: rgba(255, 255, 255, 0.86);
+  box-shadow: var(--login-card-shadow);
+  background: var(--login-card-bg);
   backdrop-filter: blur(18px) saturate(1.5);
   -webkit-backdrop-filter: blur(18px) saturate(1.5);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--login-card-border);
   animation: micro-page-in 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) backwards;
 }
 .login-brand {
@@ -288,16 +354,16 @@ body {
 .login-brand-title {
   font-size: 20px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--text-title);
 }
 .login-brand-sub {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--text-sub);
 }
 .login-footnote {
   text-align: center;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--text-sub);
   margin-top: 16px;
   margin-bottom: 0;
 }
