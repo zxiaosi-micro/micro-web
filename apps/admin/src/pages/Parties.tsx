@@ -11,15 +11,13 @@ import { PlusOutlined } from "@ant-design/icons";
 import type { ActionType, ProColumns } from "@ant-design/pro-components";
 import { ModalForm, ProFormSelect, ProFormText, ProTable } from "@ant-design/pro-components";
 import { get, Perm, post, put } from "@micro/shared";
+import { getLocale, usePrefs } from "@micro/shared/prefs";
 import type { ContactItem, CrmRecordItem, DealerExtItem, PartyItem, StaffItem } from "@micro/shared/types";
 
 const PARTY_TYPES = ["CUSTOMER", "DEALER", "SUPPLIER", "ENTERPRISE", "RECYCLER"] as const;
-const STATUS_MAP: Record<number, { text: string; color: string }> = {
-  1: { text: "正常", color: "green" },
-  2: { text: "停用", color: "red" },
-};
 
 export default function PartiesPage() {
+  const { t } = usePrefs();
   const { message } = App.useApp();
   const actionRef = useRef<ActionType | undefined>(undefined);
 
@@ -62,7 +60,7 @@ export default function PartiesPage() {
     const payload = { ...values, type: (values.type as string[] | undefined) ?? [] };
     if (editing === "new") await post("/parties", payload);
     else if (editing) await put(`/parties/${editing.party_id}`, payload);
-    message.success("已保存");
+    message.success(t("common.saved"));
     setEditing(null);
     actionRef.current?.reload();
     return true;
@@ -71,7 +69,7 @@ export default function PartiesPage() {
   const submitContact = async (values: Record<string, unknown>) => {
     if (!detailId) return false;
     await post(`/parties/${detailId}/contacts`, values);
-    message.success("已保存");
+    message.success(t("common.saved"));
     setContactOpen(false);
     void reloadDetail(detailId);
     return true;
@@ -80,37 +78,37 @@ export default function PartiesPage() {
   const submitCrm = async (values: Record<string, unknown>) => {
     if (!detailId) return false;
     await post(`/parties/${detailId}/crm`, values);
-    message.success("已保存");
+    message.success(t("common.saved"));
     setCrmOpen(false);
     void reloadDetail(detailId);
     return true;
   };
 
   const columns: ProColumns<PartyItem>[] = [
-    { title: "名称", dataIndex: "keyword", hideInTable: true, fieldProps: { placeholder: "名称/信用代码" } },
-    { title: "名称", dataIndex: "name", search: false },
+    { title: t("parties.name"), dataIndex: "keyword", hideInTable: true, fieldProps: { placeholder: t("parties.searchPlaceholder") } },
+    { title: t("parties.name"), dataIndex: "name", search: false },
     {
-      title: "类型",
+      title: t("parties.type"),
       dataIndex: "type",
       search: false,
-      render: (_, r) => (r.type ?? []).map((t) => <Tag key={t}>{t}</Tag>),
+      render: (_, r) => (r.type ?? []).map((tp) => <Tag key={tp}>{tp}</Tag>),
     },
-    { title: "信用代码", dataIndex: "credit_code", search: false, render: (_, r) => r.credit_code || "-" },
-    { title: "区域", dataIndex: "region", search: false, render: (_, r) => r.region || "-" },
+    { title: t("parties.creditCode"), dataIndex: "credit_code", search: false, render: (_, r) => r.credit_code || "-" },
+    { title: t("parties.region"), dataIndex: "region", search: false, render: (_, r) => r.region || "-" },
     {
-      title: "状态",
+      title: t("common.status"),
       dataIndex: "status",
       search: false,
-      render: (_, r) => <Tag color={STATUS_MAP[r.status]?.color}>{STATUS_MAP[r.status]?.text ?? r.status}</Tag>,
+      render: (_, r) => <Tag color={r.status === 1 ? "green" : "red"}>{r.status === 1 ? t("tenants.active") : t("tenants.disabled")}</Tag>,
     },
     {
-      title: "操作",
+      title: t("common.actions"),
       valueType: "option",
       render: (_, r) => (
         <Space>
-          <Button size="small" type="link" onClick={() => openDetail(r.party_id)}>详情</Button>
+          <Button size="small" type="link" onClick={() => openDetail(r.party_id)}>{t("parties.detail")}</Button>
           <Perm code="party:party:update">
-            <Button size="small" type="link" onClick={() => { setEditing(r); form.setFieldsValue({ ...r }); }}>编辑</Button>
+            <Button size="small" type="link" onClick={() => { setEditing(r); form.setFieldsValue({ ...r }); }}>{t("common.edit")}</Button>
           </Perm>
         </Space>
       ),
@@ -120,7 +118,7 @@ export default function PartiesPage() {
   return (
     <>
       <ProTable<PartyItem>
-        headerTitle="参与方管理"
+        headerTitle={t("parties.title")}
         rowKey="party_id"
         actionRef={actionRef}
         columns={columns}
@@ -133,112 +131,112 @@ export default function PartiesPage() {
         pagination={{ defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 20, 50, 100] }}
         toolBarRender={() => [
           <Perm key="create" code="party:party:create">
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing("new"); form.resetFields(); }}>新建参与方</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing("new"); form.resetFields(); }}>{t("parties.create")}</Button>
           </Perm>,
         ]}
       />
 
       <ModalForm
-        title={editing === "new" ? "新建参与方" : "编辑参与方"}
+        title={editing === "new" ? t("parties.create") : t("parties.editTitle")}
         open={editing !== null}
         onOpenChange={(o) => { if (!o) setEditing(null); }}
         form={form}
         modalProps={{ destroyOnHidden: true }}
         onFinish={submit}
       >
-        <ProFormText name="name" label="名称" rules={[{ required: true }]} />
+        <ProFormText name="name" label={t("parties.name")} rules={[{ required: true, message: t("common.required") }]} />
         <ProFormSelect
           name="type"
-          label="类型(可多选)"
+          label={t("parties.typeMulti")}
           mode="multiple"
-          options={PARTY_TYPES.map((t) => ({ value: t, label: t }))}
-          rules={[{ required: true }]}
+          options={PARTY_TYPES.map((tp) => ({ value: tp, label: tp }))}
+          rules={[{ required: true, message: t("common.required") }]}
         />
-        <ProFormText name="credit_code" label="统一社会信用代码" />
-        <ProFormText name="region" label="区域" />
-        <ProFormText name="address" label="地址" />
-        <ProFormText name="remark" label="备注" />
+        <ProFormText name="credit_code" label={t("parties.creditCode")} />
+        <ProFormText name="region" label={t("parties.region")} />
+        <ProFormText name="address" label={t("parties.address")} />
+        <ProFormText name="remark" label={t("parties.remark")} />
       </ModalForm>
 
-      <Drawer title={detail?.name ?? "参与方详情"} width={720} open={detailId !== null} onClose={() => setDetailId(null)}>
+      <Drawer title={detail?.name ?? t("parties.detailTitle")} width={720} open={detailId !== null} onClose={() => setDetailId(null)}>
         {detail && (
           <Tabs items={[
             {
-              key: "contacts", label: "联系人", children: (
+              key: "contacts", label: t("parties.tabContacts"), children: (
                 <>
                   <Perm code="party:contact:create">
-                    <Button size="small" icon={<PlusOutlined />} style={{ marginBottom: 8 }} onClick={() => setContactOpen(true)}>新增联系人</Button>
+                    <Button size="small" icon={<PlusOutlined />} style={{ marginBottom: 8 }} onClick={() => setContactOpen(true)}>{t("parties.addContact")}</Button>
                   </Perm>
                   <Table rowKey="contact_id" size="small" pagination={false} dataSource={contacts}
                     columns={[
-                      { title: "姓名", dataIndex: "name" },
-                      { title: "手机号", dataIndex: "mobile" },
-                      { title: "职务", dataIndex: "position", render: (v: string) => v || "-" },
-                      { title: "默认", dataIndex: "is_default", render: (v: boolean) => (v ? <Tag color="blue">默认</Tag> : "-") },
+                      { title: t("users.nickname"), dataIndex: "name" },
+                      { title: t("users.mobile"), dataIndex: "mobile" },
+                      { title: t("parties.position"), dataIndex: "position", render: (v: string) => v || "-" },
+                      { title: t("parties.isDefault"), dataIndex: "is_default", render: (v: boolean) => (v ? <Tag color="blue">{t("parties.isDefault")}</Tag> : "-") },
                     ]} />
                 </>
               ),
             },
             {
-              key: "crm", label: "跟进记录", children: (
+              key: "crm", label: t("parties.tabCrm"), children: (
                 <>
                   <Perm code="party:crm:create">
-                    <Button size="small" icon={<PlusOutlined />} style={{ marginBottom: 8 }} onClick={() => setCrmOpen(true)}>追加跟进</Button>
+                    <Button size="small" icon={<PlusOutlined />} style={{ marginBottom: 8 }} onClick={() => setCrmOpen(true)}>{t("parties.addCrm")}</Button>
                   </Perm>
                   <Table rowKey="record_id" size="small" pagination={false} dataSource={crm}
                     columns={[
-                      { title: "内容", dataIndex: "content" },
-                      { title: "时间", dataIndex: "created_at", render: (v: number) => (v ? new Date(v).toLocaleString("zh-CN") : "-") },
+                      { title: t("parties.content"), dataIndex: "content" },
+                      { title: t("parties.time"), dataIndex: "created_at", render: (v: number) => (v ? new Date(v).toLocaleString(getLocale()) : "-") },
                     ]} />
                 </>
               ),
             },
             {
-              key: "staff", label: "员工", children: (
+              key: "staff", label: t("parties.tabStaff"), children: (
                 <Table rowKey="staff_id" size="small" pagination={false} dataSource={staff}
                   columns={[
-                    { title: "姓名", dataIndex: "name" },
-                    { title: "类型", dataIndex: "staff_type" },
-                    { title: "技能", dataIndex: "skill_tags", render: (v: string[]) => (v ?? []).map((t) => <Tag key={t}>{t}</Tag>) },
-                    { title: "工作区域", dataIndex: "work_region", render: (v: string) => v || "-" },
+                    { title: t("users.nickname"), dataIndex: "name" },
+                    { title: t("parties.staffType"), dataIndex: "staff_type" },
+                    { title: t("parties.skillTags"), dataIndex: "skill_tags", render: (v: string[]) => (v ?? []).map((tp) => <Tag key={tp}>{tp}</Tag>) },
+                    { title: t("parties.workRegion"), dataIndex: "work_region", render: (v: string) => v || "-" },
                   ]} />
               ),
             },
             {
-              key: "dealer", label: "经销商扩展", children: dealerExt && dealerExt.party_id ? (
+              key: "dealer", label: t("parties.tabDealer"), children: dealerExt && dealerExt.party_id ? (
                 <Descriptions column={1} size="small">
-                  <Descriptions.Item label="等级">{dealerExt.dealer_level}</Descriptions.Item>
-                  <Descriptions.Item label="授权区域">{dealerExt.authorized_region || "-"}</Descriptions.Item>
-                  <Descriptions.Item label="返利规则">{dealerExt.rebate_rule || "-"}</Descriptions.Item>
+                  <Descriptions.Item label={t("parties.dealerLevel")}>{dealerExt.dealer_level}</Descriptions.Item>
+                  <Descriptions.Item label={t("parties.authRegion")}>{dealerExt.authorized_region || "-"}</Descriptions.Item>
+                  <Descriptions.Item label={t("parties.rebateRule")}>{dealerExt.rebate_rule || "-"}</Descriptions.Item>
                 </Descriptions>
-              ) : <Typography.Text type="secondary">未建档</Typography.Text>,
+              ) : <Typography.Text type="secondary">{t("parties.noRecord")}</Typography.Text>,
             },
           ]} />
         )}
       </Drawer>
 
       <ModalForm
-        title="新增联系人"
+        title={t("parties.addContact")}
         open={contactOpen}
         onOpenChange={(o) => setContactOpen(o)}
         form={contactForm}
         modalProps={{ destroyOnHidden: true }}
         onFinish={submitContact}
       >
-        <ProFormText name="name" label="姓名" rules={[{ required: true }]} />
-        <ProFormText name="mobile" label="手机号" rules={[{ required: true }]} />
-        <ProFormText name="position" label="职务" />
+        <ProFormText name="name" label={t("users.nickname")} rules={[{ required: true, message: t("common.required") }]} />
+        <ProFormText name="mobile" label={t("users.mobile")} rules={[{ required: true, message: t("common.required") }]} />
+        <ProFormText name="position" label={t("parties.position")} />
       </ModalForm>
 
       <ModalForm
-        title="追加跟进"
+        title={t("parties.addCrm")}
         open={crmOpen}
         onOpenChange={(o) => setCrmOpen(o)}
         form={crmForm}
         modalProps={{ destroyOnHidden: true }}
         onFinish={submitCrm}
       >
-        <Form.Item name="content" label="跟进内容" rules={[{ required: true }]}>
+        <Form.Item name="content" label={t("parties.crmContent")} rules={[{ required: true, message: t("common.required") }]}>
           <Input.TextArea rows={3} />
         </Form.Item>
       </ModalForm>

@@ -4,12 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { App, Button, Form, Input, InputNumber, Modal, Popconfirm, Space, Tree, Typography } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import { del, get, Perm, post, put } from "@micro/shared";
+import { usePrefs } from "@micro/shared/prefs";
 import type { OrgItem } from "@micro/shared/types";
 import type { DataNode } from "antd/es/tree";
-
-interface OrgNode extends OrgItem {
-  children?: OrgNode[];
-}
 
 interface OrgNode extends OrgItem {
   children?: OrgNode[];
@@ -33,6 +30,7 @@ function buildTree(items: OrgItem[]): OrgNode[] {
 }
 
 export default function OrgsPage() {
+  const { t } = usePrefs();
   const { message } = App.useApp();
   const [items, setItems] = useState<OrgItem[]>([]);
   const [editing, setEditing] = useState<OrgItem | "new" | null>(null);
@@ -51,7 +49,7 @@ export default function OrgsPage() {
     } else if (editing) {
       await put(`/orgs/${editing.org_id}`, values);
     }
-    message.success("已保存");
+    message.success(t("common.saved"));
     setEditing(null);
     reload();
   };
@@ -60,11 +58,11 @@ export default function OrgsPage() {
 
   return (
     <>
-      <Typography.Title level={4}>组织管理</Typography.Title>
+      <Typography.Title level={4}>{t("orgs.title")}</Typography.Title>
       <Space style={{ marginBottom: 16 }}>
         <Perm code="system:org:create">
           <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing("new"); form.resetFields(); }}>
-            新建组织
+            {t("orgs.create")}
           </Button>
         </Perm>
       </Space>
@@ -77,18 +75,18 @@ export default function OrgsPage() {
               <Space>
                 <span>{n.name}</span>
                 <Perm code="system:org:update">
-                  <Button type="link" size="small" onClick={() => { setEditing(n); form.setFieldsValue(n); }}>编辑</Button>
+                  <Button type="link" size="small" onClick={() => { setEditing(n); form.setFieldsValue(n); }}>{t("common.edit")}</Button>
                 </Perm>
                 <Perm code="system:org:create">
-                  <Button type="link" size="small" onClick={() => { setEditing("new"); form.resetFields(); form.setFieldsValue({ parent_id: n.org_id }); }}>添加子组织</Button>
+                  <Button type="link" size="small" onClick={() => { setEditing("new"); form.resetFields(); form.setFieldsValue({ parent_id: n.org_id }); }}>{t("orgs.addChild")}</Button>
                 </Perm>
                 <Perm code="system:org:delete">
-                  <Popconfirm title="确认删除?" onConfirm={async () => {
+                  <Popconfirm title={t("orgs.deleteConfirm")} onConfirm={async () => {
                     await del(`/orgs/${n.org_id}`);
-                    message.success("已删除");
+                    message.success(t("common.deleted"));
                     reload();
                   }}>
-                    <Button type="link" size="small" danger>删除</Button>
+                    <Button type="link" size="small" danger>{t("common.delete")}</Button>
                   </Popconfirm>
                 </Perm>
               </Space>
@@ -98,20 +96,22 @@ export default function OrgsPage() {
         })}
       />
       <Modal
-        title={editing === "new" ? "新建组织" : "编辑组织"}
+        title={editing === "new" ? t("orgs.create") : t("orgs.editTitle")}
         open={editing !== null}
         onOk={() => void submit()}
         onCancel={() => setEditing(null)}
+        okText={t("common.confirm")}
+        cancelText={t("common.cancel")}
         destroyOnHidden
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="parent_id" label="父组织 ID（空=根）">
-            <Input placeholder="留空为根组织" disabled={!!selected} />
+          <Form.Item name="parent_id" label={t("orgs.parentId")}>
+            <Input placeholder={t("orgs.parentPlaceholder")} disabled={!!selected} />
           </Form.Item>
-          <Form.Item name="name" label="组织名称" rules={[{ required: true, message: "必填" }]}>
+          <Form.Item name="name" label={t("orgs.name")} rules={[{ required: true, message: t("common.required") }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="sort" label="排序">
+          <Form.Item name="sort" label={t("orgs.sort")}>
             <InputNumber min={0} style={{ width: "100%" }} />
           </Form.Item>
         </Form>

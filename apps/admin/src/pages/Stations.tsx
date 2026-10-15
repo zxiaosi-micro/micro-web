@@ -9,15 +9,17 @@ import { PlusOutlined } from "@ant-design/icons";
 import type { ActionType, ProColumns } from "@ant-design/pro-components";
 import { ProTable } from "@ant-design/pro-components";
 import { get, Perm, post } from "@micro/shared";
+import { getLocale, usePrefs } from "@micro/shared/prefs";
 import type { StationView, StationDeviceView, StationMonitorResp, StationStaffView } from "@micro/shared/types";
 
-const STATUS_TAG: Record<string, { text: string; color: string }> = {
-  ACTIVE: { text: "运行中", color: "success" },
-  SUSPENDED: { text: "停用", color: "orange" },
-  RETIRED: { text: "退役", color: "red" },
+const STATUS_KEY: Record<string, { key: string; color: string }> = {
+  ACTIVE: { key: "stn.stActive", color: "success" },
+  SUSPENDED: { key: "stn.stSuspended", color: "orange" },
+  RETIRED: { key: "stn.stRetired", color: "red" },
 };
 
 export default function StationsPage() {
+  const { t } = usePrefs();
   const { message } = App.useApp();
   const [detail, setDetail] = useState<StationView | null>(null);
   const [devices, setDevices] = useState<StationDeviceView[]>([]);
@@ -47,24 +49,24 @@ export default function StationsPage() {
       setStaff(st?.list ?? []);
     };
     load();
-    const t = setInterval(load, 10000);
-    return () => { alive = false; clearInterval(t); };
+    const timer = setInterval(load, 10000);
+    return () => { alive = false; clearInterval(timer); };
   }, [detail]);
 
   const columns: ProColumns<StationView>[] = [
-    { title: "编号", dataIndex: "keyword", hideInTable: true, fieldProps: { placeholder: "场站编号/名称" } },
-    { title: "编号", dataIndex: "station_no", search: false, render: (_, s) => <a onClick={() => setDetail(s)}>{s.station_no}</a> },
-    { title: "名称", dataIndex: "name", search: false },
-    { title: "类型", dataIndex: "type", search: false, render: (_, s) => <Tag>{s.type}</Tag> },
-    { title: "状态", dataIndex: "status", search: false, render: (_, s) => <Tag color={STATUS_TAG[s.status]?.color}>{STATUS_TAG[s.status]?.text ?? s.status}</Tag> },
-    { title: "地址", dataIndex: "address", search: false, ellipsis: true, render: (_, s) => s.address || "—" },
-    { title: "容量 kWh", dataIndex: "capacity_kwh", search: false, render: (_, s) => (s.capacity_kwh ? s.capacity_kwh.toLocaleString() : "—") },
-    { title: "来源订单", dataIndex: "order_no", search: false, render: (_, s) => s.order_no || "—" },
+    { title: t("stn.no"), dataIndex: "keyword", hideInTable: true, fieldProps: { placeholder: t("stn.searchPlaceholder") } },
+    { title: t("stn.no"), dataIndex: "station_no", search: false, render: (_, s) => <a onClick={() => setDetail(s)}>{s.station_no}</a> },
+    { title: t("parties.name"), dataIndex: "name", search: false },
+    { title: t("order.type"), dataIndex: "type", search: false, render: (_, s) => <Tag>{s.type}</Tag> },
+    { title: t("common.status"), dataIndex: "status", search: false, render: (_, s) => <Tag color={STATUS_KEY[s.status]?.color}>{STATUS_KEY[s.status] ? t(STATUS_KEY[s.status].key) : s.status}</Tag> },
+    { title: t("parties.address"), dataIndex: "address", search: false, ellipsis: true, render: (_, s) => s.address || "—" },
+    { title: t("stn.capacity"), dataIndex: "capacity_kwh", search: false, render: (_, s) => (s.capacity_kwh ? s.capacity_kwh.toLocaleString() : "—") },
+    { title: t("dev.sourceOrder"), dataIndex: "order_no", search: false, render: (_, s) => s.order_no || "—" },
   ];
 
   return (<>
     <ProTable<StationView>
-      headerTitle="场站管理"
+      headerTitle={t("stn.title")}
       rowKey="station_id"
       size="small"
       actionRef={actionRef}
@@ -78,62 +80,62 @@ export default function StationsPage() {
       pagination={{ defaultPageSize: 10, showSizeChanger: true }}
       toolBarRender={() => [
         <Perm key="create" code="asset:station:create">
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>建站</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>{t("stn.create")}</Button>
         </Perm>,
       ]}
     />
 
-    <Drawer title={`场站 ${detail?.station_no ?? ""}`} width={860} open={!!detail} onClose={() => setDetail(null)}>
+    <Drawer title={t("stn.detailTitle", { no: detail?.station_no ?? "" })} width={860} open={!!detail} onClose={() => setDetail(null)}>
       {detail && (<>
         <Row gutter={12} style={{ marginBottom: 12 }}>
-          <Col span={6}><Card size="small"><Statistic title="设备数" value={monitor?.device_count ?? 0} /></Card></Col>
-          <Col span={6}><Card size="small"><Statistic title="在线" value={monitor?.online_count ?? 0} valueStyle={{ color: (monitor?.online_count ?? 0) > 0 ? "#3f8600" : "#cf1322" }} /></Card></Col>
-          <Col span={6}><Card size="small"><Statistic title="平均 SOC %" value={monitor ? Number(monitor.avg_soc.toFixed(1)) : 0} /></Card></Col>
-          <Col span={6}><Card size="small"><Statistic title="总功率 W" value={monitor ? Number(monitor.total_power.toFixed(0)) : 0} /></Card></Col>
+          <Col span={6}><Card size="small"><Statistic title={t("stn.deviceCount")} value={monitor?.device_count ?? 0} /></Card></Col>
+          <Col span={6}><Card size="small"><Statistic title={t("stn.online")} value={monitor?.online_count ?? 0} valueStyle={{ color: (monitor?.online_count ?? 0) > 0 ? "#3f8600" : "#cf1322" }} /></Card></Col>
+          <Col span={6}><Card size="small"><Statistic title={t("stn.avgSoc")} value={monitor ? Number(monitor.avg_soc.toFixed(1)) : 0} /></Card></Col>
+          <Col span={6}><Card size="small"><Statistic title={t("stn.totalPower")} value={monitor ? Number(monitor.total_power.toFixed(0)) : 0} /></Card></Col>
         </Row>
         <Descriptions column={2} size="small" bordered>
-          <Descriptions.Item label="名称">{detail.name}</Descriptions.Item>
-          <Descriptions.Item label="类型">{detail.type}</Descriptions.Item>
-          <Descriptions.Item label="地址" span={2}>{detail.address || "—"}</Descriptions.Item>
-          <Descriptions.Item label="经纬度">{detail.longitude}, {detail.latitude}</Descriptions.Item>
-          <Descriptions.Item label="额定功率 kW">{detail.power_kw || "—"}</Descriptions.Item>
+          <Descriptions.Item label={t("parties.name")}>{detail.name}</Descriptions.Item>
+          <Descriptions.Item label={t("order.type")}>{detail.type}</Descriptions.Item>
+          <Descriptions.Item label={t("parties.address")} span={2}>{detail.address || "—"}</Descriptions.Item>
+          <Descriptions.Item label={t("stn.longitude")}>{detail.longitude}, {detail.latitude}</Descriptions.Item>
+          <Descriptions.Item label={t("stn.powerKw")}>{detail.power_kw || "—"}</Descriptions.Item>
         </Descriptions>
 
-        <Typography5 label="绑定设备" extra={<Perm code="asset:station:bind"><Button size="small" onClick={() => setBindOpen(true)}>绑定</Button></Perm>} />
+        <Typography5 label={t("stn.boundDevices")} extra={<Perm code="asset:station:bind"><Button size="small" onClick={() => setBindOpen(true)}>{t("stn.bind")}</Button></Perm>} />
         <Table rowKey="id" size="small" pagination={false} dataSource={devices}
           columns={[
             { title: "SN", dataIndex: "sn" },
-            { title: "角色", dataIndex: "role", render: (v: string) => <Tag>{v}</Tag> },
-            { title: "绑定时间", dataIndex: "bound_at", render: (v: number) => (v ? new Date(v).toLocaleString() : "—") },
+            { title: t("stn.role"), dataIndex: "role", render: (v: string) => <Tag>{v}</Tag> },
+            { title: t("stn.boundAt"), dataIndex: "bound_at", render: (v: number) => (v ? new Date(v).toLocaleString(getLocale()) : "—") },
           ]} />
 
-        <Typography5 label="拓扑（React Flow 数据）" extra={topology ? <Tag>版本 v{topology.version}</Tag> : null} />
+        <Typography5 label={t("stn.topologyData")} extra={topology ? <Tag>{t("stn.versionTag", { version: topology.version })}</Tag> : null} />
         <TopologyPreview topology={topology} />
 
-        <Typography5 label="监控明细" />
+        <Typography5 label={t("stn.monitorDetail")} />
         <Table rowKey="device_id" size="small" pagination={false} dataSource={monitor?.items ?? []}
           columns={[
             { title: "SN", dataIndex: "sn" },
-            { title: "在线", dataIndex: "online", render: (v: boolean) => v ? <Tag color="green">在线</Tag> : <Tag>离线</Tag> },
-            { title: "SOC %", dataIndex: "soc" },
-            { title: "功率 W", dataIndex: "power" },
-            { title: "电压 V", dataIndex: "voltage" },
-            { title: "温度", dataIndex: "temperature" },
+            { title: t("stn.online"), dataIndex: "online", render: (v: boolean) => v ? <Tag color="green">{t("stn.online")}</Tag> : <Tag>{t("stn.offline")}</Tag> },
+            { title: t("stn.soc"), dataIndex: "soc" },
+            { title: t("stn.powerW"), dataIndex: "power" },
+            { title: t("stn.voltage"), dataIndex: "voltage" },
+            { title: t("stn.temperature"), dataIndex: "temperature" },
           ]} />
 
-        <Typography5 label="驻场人员" extra={<Perm code="asset:station:staff"><StaffAddButton stationId={detail.station_id} onDone={() => { get<{ list: StationStaffView[] }>(`/stations/${detail.station_id}/staff`).then((s) => setStaff(s.list)); }} /></Perm>} />
+        <Typography5 label={t("stn.staff")} extra={<Perm code="asset:station:staff"><StaffAddButton stationId={detail.station_id} onDone={() => { get<{ list: StationStaffView[] }>(`/stations/${detail.station_id}/staff`).then((s) => setStaff(s.list)); }} /></Perm>} />
         <Table rowKey="id" size="small" pagination={false} dataSource={staff}
           columns={[
-            { title: "用户 ID", dataIndex: "user_id" },
-            { title: "类型", dataIndex: "staff_type", render: (v: string) => <Tag>{v}</Tag> },
-            { title: "排班", dataIndex: "shift", render: (v: string) => v || "—" },
+            { title: t("stn.userId"), dataIndex: "user_id" },
+            { title: t("parties.staffType"), dataIndex: "staff_type", render: (v: string) => <Tag>{v}</Tag> },
+            { title: t("stn.shift"), dataIndex: "shift", render: (v: string) => v || "—" },
             {
-              title: "操作", render: (_: unknown, s) => (<Perm code="asset:station:staff">
+              title: t("common.actions"), render: (_: unknown, s) => (<Perm code="asset:station:staff">
                 <Button size="small" danger onClick={async () => {
                   await fetchCfgDelete(`/stations/${detail.station_id}/staff`, s.user_id);
-                  message.success("已移除");
+                  message.success(t("stn.removed"));
                   setStaff(staff.filter((x) => x.id !== s.id));
-                }}>移除</Button>
+                }}>{t("stn.remove")}</Button>
               </Perm>),
             },
           ]} />
@@ -169,8 +171,9 @@ function Typography5({ label, extra }: { label: string; extra?: React.ReactNode 
 
 // TopologyPreview 拓扑预览（React Flow nodes/edges JSON 解析为只读列表——完整画布 S7 场站 Web 端落地）。
 function TopologyPreview({ topology }: { topology: { version: number; nodes_json: string; edges_json: string } | null }) {
+  const { t } = usePrefs();
   if (!topology || topology.version === 0) {
-    return <span style={{ color: "#999" }}>暂无拓扑</span>;
+    return <span style={{ color: "var(--text-sub, #999)" }}>{t("stn.noTopology")}</span>;
   }
   let nodes: { id?: string; data?: { label?: string } }[] = [];
   let edges: { source?: string; target?: string }[] = [];
@@ -181,13 +184,13 @@ function TopologyPreview({ topology }: { topology: { version: number; nodes_json
     // 解析失败只显示版本号
   }
   return (
-    <div style={{ border: "1px solid #eee", padding: 8, borderRadius: 4 }}>
-      {nodes.length === 0 ? <span style={{ color: "#999" }}>空拓扑</span> : (
+    <div style={{ border: "1px solid var(--pref-border, #eee)", padding: 8, borderRadius: 4 }}>
+      {nodes.length === 0 ? <span style={{ color: "var(--text-sub, #999)" }}>{t("stn.emptyTopology")}</span> : (
         <ol style={{ margin: 0, paddingLeft: 20 }}>
           {nodes.map((n, i) => (
-            <li key={i}>{n.data?.label ?? n.id ?? `节点${i + 1}`}
+            <li key={i}>{n.data?.label ?? n.id ?? `#${i + 1}`}
               {edges.filter((e) => e.target === n.id || e.source === n.id).length > 0 &&
-                <span style={{ color: "#999" }}>（{edges.filter((e) => e.target === n.id || e.source === n.id).length} 条连接）</span>}
+                <span style={{ color: "var(--text-sub, #999)" }}>（{edges.filter((e) => e.target === n.id || e.source === n.id).length}）</span>}
             </li>
           ))}
         </ol>
@@ -197,46 +200,48 @@ function TopologyPreview({ topology }: { topology: { version: number; nodes_json
 }
 
 function StaffAddButton({ stationId, onDone }: { stationId: string; onDone: () => void }) {
+  const { t } = usePrefs();
   const { message } = App.useApp();
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm();
   return (<>
-    <Button size="small" onClick={() => setOpen(true)}>添加</Button>
-    <Modal title="添加驻场人员" open={open} onCancel={() => setOpen(false)} onOk={async () => {
+    <Button size="small" onClick={() => setOpen(true)}>{t("stn.add")}</Button>
+    <Modal title={t("stn.staffTitle")} open={open} onCancel={() => setOpen(false)} okText={t("common.confirm")} cancelText={t("common.cancel")} onOk={async () => {
       const v = await form.validateFields();
       await post(`/stations/${stationId}/staff`, { user_id: v.user_id, staff_type: v.staff_type, shift: v.shift || "" });
-      message.success("已添加");
+      message.success(t("stn.added"));
       setOpen(false);
       onDone();
     }}>
       <Form form={form} layout="vertical">
-        <Form.Item name="user_id" label="用户 ID" rules={[{ required: true }]}><Input /></Form.Item>
-        <Form.Item name="staff_type" label="类型" initialValue="RESIDENT">
+        <Form.Item name="user_id" label={t("stn.userId")} rules={[{ required: true, message: t("common.required") }]}><Input /></Form.Item>
+        <Form.Item name="staff_type" label={t("parties.staffType")} initialValue="RESIDENT">
           <Select options={[
-            { value: "RESIDENT", label: "驻场" },
-            { value: "INSPECTOR", label: "巡检" },
-            { value: "MANAGER", label: "站长" },
+            { value: "RESIDENT", label: t("stn.staffResident") },
+            { value: "INSPECTOR", label: t("stn.staffInspector") },
+            { value: "MANAGER", label: t("stn.staffManager") },
           ]} />
         </Form.Item>
-        <Form.Item name="shift" label="排班（可选）"><Input placeholder="day/night" /></Form.Item>
+        <Form.Item name="shift" label={t("stn.shiftOptional")}><Input placeholder="day/night" /></Form.Item>
       </Form>
     </Modal>
   </>);
 }
 
 function BindModal({ stationId, open, onClose }: { stationId: string; open: boolean; onClose: () => void }) {
+  const { t } = usePrefs();
   const { message } = App.useApp();
   const [form] = Form.useForm();
   return (
-    <Modal title="绑定设备（SN 清单，每行一个）" open={open} onCancel={onClose} onOk={async () => {
+    <Modal title={t("stn.bindTitle")} open={open} onCancel={onClose} okText={t("common.confirm")} cancelText={t("common.cancel")} onOk={async () => {
       const v = await form.validateFields();
       const sns = String(v.sns).split("\n").map((s: string) => s.trim()).filter(Boolean);
       await post(`/stations/${stationId}/devices`, { devices: sns.map((sn: string) => ({ sn, role: "PACK" })), bound_by: "manual" });
-      message.success(`已绑定 ${sns.length} 台`);
+      message.success(t("stn.bound", { count: sns.length }));
       onClose();
     }}>
       <Form form={form} layout="vertical">
-        <Form.Item name="sns" label="SN 清单" rules={[{ required: true }]}>
+        <Form.Item name="sns" label={t("stn.snList")} rules={[{ required: true, message: t("common.required") }]}>
           <Input.TextArea rows={5} placeholder={"SN-0001\nSN-0002"} />
         </Form.Item>
       </Form>
@@ -245,10 +250,11 @@ function BindModal({ stationId, open, onClose }: { stationId: string; open: bool
 }
 
 function CreateModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = usePrefs();
   const { message } = App.useApp();
   const [form] = Form.useForm();
   return (
-    <Modal title="创建场站（Saga 步骤6 手工兜底口径）" open={open} onCancel={onClose} width={640}
+    <Modal title={t("stn.createTitle")} open={open} onCancel={onClose} width={640} okText={t("common.confirm")} cancelText={t("common.cancel")}
       onOk={async () => {
         const v = await form.validateFields();
         const sns = String(v.sns || "").split("\n").map((s: string) => s.trim()).filter(Boolean);
@@ -259,33 +265,33 @@ function CreateModal({ open, onClose }: { open: boolean; onClose: () => void }) 
           capacity_kwh: Number(v.capacity_kwh) || 0, power_kw: Number(v.power_kw) || 0,
           devices: sns.map((sn: string) => ({ sn, role: "PACK" })),
         });
-        message.success("场站已创建（station_created 事件已发）");
+        message.success(t("stn.created"));
         onClose();
       }}>
       <Form form={form} layout="vertical">
-        <Form.Item name="name" label="场站名称" rules={[{ required: true }]}><Input /></Form.Item>
-        <Form.Item name="type" label="类型" initialValue="ESS">
+        <Form.Item name="name" label={t("stn.stationName")} rules={[{ required: true, message: t("common.required") }]}><Input /></Form.Item>
+        <Form.Item name="type" label={t("order.type")} initialValue="ESS">
           <Select options={[
-            { value: "ESS", label: "储能 ESS" },
-            { value: "CHARGING", label: "充电 CHARGING" },
-            { value: "HESS", label: "混合 HESS" },
+            { value: "ESS", label: t("stn.typeEss") },
+            { value: "CHARGING", label: t("stn.typeCharging") },
+            { value: "HESS", label: t("stn.typeHess") },
           ]} />
         </Form.Item>
-        <Form.Item name="station_no" label="场站编号（空自动生成）"><Input /></Form.Item>
+        <Form.Item name="station_no" label={t("stn.stationNo")}><Input /></Form.Item>
         <Space>
-          <Form.Item name="province" label="省"><Input /></Form.Item>
-          <Form.Item name="city" label="市"><Input /></Form.Item>
+          <Form.Item name="province" label={t("stn.province")}><Input /></Form.Item>
+          <Form.Item name="city" label={t("stn.city")}><Input /></Form.Item>
         </Space>
-        <Form.Item name="address" label="详细地址"><Input /></Form.Item>
+        <Form.Item name="address" label={t("stn.detailAddress")}><Input /></Form.Item>
         <Space>
-          <Form.Item name="longitude" label="经度"><InputNumber /></Form.Item>
-          <Form.Item name="latitude" label="纬度"><InputNumber /></Form.Item>
+          <Form.Item name="longitude" label={t("stn.longitudeInput")}><InputNumber /></Form.Item>
+          <Form.Item name="latitude" label={t("stn.latitudeInput")}><InputNumber /></Form.Item>
         </Space>
         <Space>
-          <Form.Item name="capacity_kwh" label="容量 kWh"><InputNumber /></Form.Item>
-          <Form.Item name="power_kw" label="额定功率 kW"><InputNumber /></Form.Item>
+          <Form.Item name="capacity_kwh" label={t("stn.capacityInput")}><InputNumber /></Form.Item>
+          <Form.Item name="power_kw" label={t("stn.powerInput")}><InputNumber /></Form.Item>
         </Space>
-        <Form.Item name="sns" label="初始绑定 SN（每行一个，可空）">
+        <Form.Item name="sns" label={t("stn.initialSns")}>
           <Input.TextArea rows={3} />
         </Form.Item>
       </Form>

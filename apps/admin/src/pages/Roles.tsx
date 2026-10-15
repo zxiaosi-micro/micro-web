@@ -6,6 +6,7 @@ import { PlusOutlined } from "@ant-design/icons";
 import type { ActionType, ProColumns } from "@ant-design/pro-components";
 import { ModalForm, ProFormText, ProTable } from "@ant-design/pro-components";
 import { del, get, Perm, post, put } from "@micro/shared";
+import { usePrefs } from "@micro/shared/prefs";
 import type { MenuItem, RoleItem } from "@micro/shared/types";
 import type { DataNode } from "antd/es/tree";
 
@@ -32,6 +33,7 @@ function toTreeData(items: MenuItem[]): DataNode[] {
 }
 
 export default function RolesPage() {
+  const { t } = usePrefs();
   const { message } = App.useApp();
   const actionRef = useRef<ActionType | undefined>(undefined);
   const [editing, setEditing] = useState<RoleItem | "new" | null>(null);
@@ -71,32 +73,32 @@ export default function RolesPage() {
     } else if (editing) {
       await put(`/roles/${editing.role_id}`, { ...values, data_scope, menu_ids: checkedKeys });
     }
-    message.success("已保存（相关用户权限即时刷新）");
+    message.success(t("roles.saved"));
     setEditing(null);
     actionRef.current?.reload();
     return true;
   };
 
   const columns: ProColumns<RoleItem>[] = [
-    { title: "角色码", dataIndex: "code", search: false },
-    { title: "角色名", dataIndex: "name", search: false },
-    { title: "数据域", dataIndex: "data_scope", search: false },
-    { title: "备注", dataIndex: "remark", search: false },
+    { title: t("roles.code"), dataIndex: "code", search: false },
+    { title: t("roles.name"), dataIndex: "name", search: false },
+    { title: t("roles.dataScope"), dataIndex: "data_scope", search: false },
+    { title: t("roles.remark"), dataIndex: "remark", search: false },
     {
-      title: "操作",
+      title: t("common.actions"),
       valueType: "option",
       render: (_, r) => (
         <Space>
           <Perm code="system:role:update">
-            <Button size="small" onClick={() => void openEdit(r)}>编辑</Button>
+            <Button size="small" onClick={() => void openEdit(r)}>{t("common.edit")}</Button>
           </Perm>
           <Perm code="system:role:delete">
-            <Popconfirm title="确认删除该角色?" onConfirm={async () => {
+            <Popconfirm title={t("roles.deleteConfirm")} onConfirm={async () => {
               await del(`/roles/${r.role_id}`);
-              message.success("已删除");
+              message.success(t("common.deleted"));
               actionRef.current?.reload();
             }}>
-              <Button size="small" danger type="link">删除</Button>
+              <Button size="small" danger type="link">{t("common.delete")}</Button>
             </Popconfirm>
           </Perm>
         </Space>
@@ -107,7 +109,7 @@ export default function RolesPage() {
   return (
     <>
       <ProTable<RoleItem>
-        headerTitle="角色管理"
+        headerTitle={t("roles.title")}
         rowKey="role_id"
         actionRef={actionRef}
         columns={columns}
@@ -121,12 +123,12 @@ export default function RolesPage() {
         pagination={{ defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 20, 50, 100] }}
         toolBarRender={() => [
           <Perm key="create" code="system:role:create">
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => void openEdit("new")}>新建角色</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => void openEdit("new")}>{t("roles.create")}</Button>
           </Perm>,
         ]}
       />
       <ModalForm
-        title={editing === "new" ? "新建角色" : "编辑角色"}
+        title={editing === "new" ? t("roles.create") : t("roles.editTitle")}
         open={editing !== null}
         onOpenChange={(o) => { if (!o) setEditing(null); }}
         form={form}
@@ -135,25 +137,25 @@ export default function RolesPage() {
       >
         <ProFormText
           name="code"
-          label="角色码"
+          label={t("roles.code")}
           disabled={editing !== "new"}
-          placeholder="admin 等（唯一）"
-          rules={[{ required: true, message: "必填" }]}
+          placeholder={t("roles.codePlaceholder")}
+          rules={[{ required: true, message: t("common.required") }]}
         />
-        <ProFormText name="name" label="角色名" rules={[{ required: true, message: "必填" }]} />
-        <Form.Item name="data_scope_type" label="数据域">
+        <ProFormText name="name" label={t("roles.name")} rules={[{ required: true, message: t("common.required") }]} />
+        <Form.Item name="data_scope_type" label={t("roles.dataScope")}>
           <Radio.Group
             options={[
-              { value: "ALL", label: "全部数据" },
-              { value: "ORG", label: "本组织" },
-              { value: "SELF", label: "仅本人" },
+              { value: "ALL", label: t("roles.scopeAll") },
+              { value: "ORG", label: t("roles.scopeOrg") },
+              { value: "SELF", label: t("roles.scopeSelf") },
             ]}
           />
         </Form.Item>
-        <Form.Item name="remark" label="备注">
+        <Form.Item name="remark" label={t("roles.remark")}>
           <Input.TextArea rows={2} />
         </Form.Item>
-        <Form.Item label="菜单权限树">
+        <Form.Item label={t("roles.menuTree")}>
           <Tree
             checkable
             defaultExpandAll

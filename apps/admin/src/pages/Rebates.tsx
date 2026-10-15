@@ -10,12 +10,13 @@ import { AuditOutlined, PayCircleOutlined, ThunderboltOutlined } from "@ant-desi
 import type { ActionType, ProColumns } from "@ant-design/pro-components";
 import { ProTable } from "@ant-design/pro-components";
 import { get, Perm, post } from "@micro/shared";
+import { getLocale, usePrefs } from "@micro/shared/prefs";
 import type { RebateDiffItem, RebateSettlementItem, RebateRunResp } from "@micro/shared/types";
 
-const STATUS_META: Record<string, { text: string; color: string }> = {
-  PENDING: { text: "待确认", color: "orange" },
-  CONFIRMED: { text: "已确认", color: "blue" },
-  PAID: { text: "已打款", color: "green" },
+const STATUS_META: Record<string, { key: string; color: string }> = {
+  PENDING: { key: "reb.stPending", color: "orange" },
+  CONFIRMED: { key: "reb.stConfirmed", color: "blue" },
+  PAID: { key: "reb.stPaid", color: "green" },
 };
 
 export default function RebatesPage() {
@@ -23,6 +24,7 @@ export default function RebatesPage() {
 }
 
 function RebatesTab() {
+  const { t } = usePrefs();
   const { message } = App.useApp();
   const [period, setPeriod] = useState("");
   const [status, setStatus] = useState("");
@@ -39,39 +41,39 @@ function RebatesTab() {
   const actionRef = useRef<ActionType | undefined>(undefined);
 
   const columns: ProColumns<RebateSettlementItem>[] = [
-    { title: "结算周期", dataIndex: "period" },
-    { title: "经销商", dataIndex: "party_id" },
-    { title: "返利金额", dataIndex: "amount", render: (_, r) => `¥${r.amount}` },
-    { title: "状态", dataIndex: "status", render: (_, r) => <Tag color={STATUS_META[r.status]?.color}>{STATUS_META[r.status]?.text ?? r.status}</Tag> },
+    { title: t("reb.period"), dataIndex: "period" },
+    { title: t("reb.dealer"), dataIndex: "party_id" },
+    { title: t("reb.amount"), dataIndex: "amount", render: (_, r) => `¥${r.amount}` },
+    { title: t("common.status"), dataIndex: "status", render: (_, r) => <Tag color={STATUS_META[r.status]?.color}>{STATUS_META[r.status] ? t(STATUS_META[r.status].key) : r.status}</Tag> },
     {
-      title: "规则快照",
+      title: t("reb.ruleSnapshot"),
       dataIndex: "rule_snapshot",
       render: (_, r) => (r.rule_snapshot
         ? <Typography.Paragraph style={{ maxWidth: 320, marginBottom: 0 }} ellipsis={{ tooltip: r.rule_snapshot }} code>{r.rule_snapshot}</Typography.Paragraph>
         : "—"),
     },
-    { title: "创建时间", dataIndex: "created_at", render: (_, r) => new Date(r.created_at).toLocaleString() },
+    { title: t("inv.createdAt"), dataIndex: "created_at", render: (_, r) => new Date(r.created_at).toLocaleString(getLocale()) },
     {
-      title: "操作",
+      title: t("common.actions"),
       valueType: "option",
       render: (_, r) => (
         <Space>
           {r.status === "PENDING" && (
             <Perm code="finance:rebate:confirm">
-              <Popconfirm title="确认后金额锁定（规则快照不可再被结算覆盖），继续？" onConfirm={async () => {
+              <Popconfirm title={t("reb.confirmLockHint")} okText={t("common.confirm")} cancelText={t("common.cancel")} onConfirm={async () => {
                 await post(`/rebate-settlements/${r.settlement_id}/confirm`, { action: "CONFIRM" });
-                message.success("已确认（PENDING→CONFIRMED）");
+                message.success(t("reb.confirmed"));
                 actionRef.current?.reload();
-              }}><Button size="small" type="primary">确认</Button></Popconfirm>
+              }}><Button size="small" type="primary">{t("reb.confirm")}</Button></Popconfirm>
             </Perm>
           )}
           {r.status === "CONFIRMED" && (
             <Perm code="finance:rebate:confirm">
-              <Popconfirm title="标记已打款？" onConfirm={async () => {
+              <Popconfirm title={t("reb.paidHint")} okText={t("common.confirm")} cancelText={t("common.cancel")} onConfirm={async () => {
                 await post(`/rebate-settlements/${r.settlement_id}/confirm`, { action: "PAID" });
-                message.success("已打款（CONFIRMED→PAID）");
+                message.success(t("reb.paid"));
                 actionRef.current?.reload();
-              }}><Button size="small" icon={<PayCircleOutlined />}>打款</Button></Popconfirm>
+              }}><Button size="small" icon={<PayCircleOutlined />}>{t("reb.pay")}</Button></Popconfirm>
             </Perm>
           )}
         </Space>
@@ -82,7 +84,7 @@ function RebatesTab() {
   return (
     <>
       <ProTable<RebateSettlementItem>
-        headerTitle="经销商返利"
+        headerTitle={t("reb.title")}
         rowKey="settlement_id"
         actionRef={actionRef}
         columns={columns}
@@ -96,69 +98,68 @@ function RebatesTab() {
         }}
         pagination={{ defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 20, 50, 100] }}
         toolBarRender={() => [
-          <Input key="period" style={{ width: 140 }} placeholder="周期 yyyy-MM" value={period}
+          <Input key="period" style={{ width: 140 }} placeholder={t("reb.periodPlaceholder")} value={period}
             onChange={(e) => setPeriod(e.target.value)} allowClear />,
           <Select key="status" style={{ width: 120 }} value={status || "all"} onChange={(v) => setStatus(v === "all" ? "" : v)}
-            options={[{ value: "all", label: "全部状态" }, ...Object.entries(STATUS_META).map(([k, t]) => ({ value: k, label: t.text }))]} />,
-          <Input key="party" style={{ width: 160 }} placeholder="经销商 party ID" value={partyId}
+            options={[{ value: "all", label: t("ret.allStatus") }, ...Object.entries(STATUS_META).map(([k, m]) => ({ value: k, label: t(m.key) }))]} />,
+          <Input key="party" style={{ width: 160 }} placeholder={t("reb.partyPlaceholder")} value={partyId}
             onChange={(e) => setPartyId(e.target.value)} allowClear />,
           <Perm key="run" code="finance:rebate:settle">
             <Button type="primary" icon={<ThunderboltOutlined />}
               onClick={() => { setRunResult(null); setRunPeriod(period || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`); setRunOpen(true); }}>
-              月度结算
+              {t("reb.monthlySettle")}
             </Button>
           </Perm>,
           <Perm key="recon" code="finance:rebate:list">
             <Button icon={<AuditOutlined />}
               onClick={() => { setReconPeriod(period || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`); setReconDiffs([]); setReconCount(0); setReconOpen(true); }}>
-              月度对账
+              {t("reb.monthlyRecon")}
             </Button>
           </Perm>,
         ]}
       />
 
       {/* 月度结算 */}
-      <Modal title="经销商返利月度结算" open={runOpen} destroyOnClose onCancel={() => setRunOpen(false)}
+      <Modal title={t("reb.settleTitle")} open={runOpen} destroyOnClose okText={t("reb.executeSettle")} cancelText={t("common.cancel")} confirmLoading={running} onCancel={() => setRunOpen(false)}
         onOk={async () => {
           if (!/^\d{4}-\d{2}$/.test(runPeriod)) {
-            message.warning("周期格式 yyyy-MM");
+            message.warning(t("reb.periodInvalid"));
             return;
           }
           setRunning(true);
           try {
             const r = await post<RebateRunResp>("/rebate-settlements/run", { period: runPeriod });
             setRunResult(r);
-            message.success(`结算完成：${r.results.length} 家经销商出单（PENDING 待确认）`);
+            message.success(t("reb.settleDone", { count: r.results.length }));
             actionRef.current?.reload();
           } finally {
             setRunning(false);
           }
-        }} okText="执行结算" confirmLoading={running}>
+        }}>
         <Typography.Paragraph type="secondary">
-          按经销商 dealer_ext.rebate_rule 规则快照计提（基数 = 周期内实付总额 × 费率，四舍五入到分）；
-          QUARTER 规则仅季末月出单；已确认/已打款的结算单金额锁定不被覆盖。
+          {t("reb.settleHint")}
         </Typography.Paragraph>
-        <Input value={runPeriod} onChange={(e) => setRunPeriod(e.target.value)} placeholder="yyyy-MM" style={{ width: 160 }} />
+        <Input value={runPeriod} onChange={(e) => setRunPeriod(e.target.value)} placeholder={t("reb.periodPlaceholder")} style={{ width: 160 }} />
         {runResult && (
           <Table style={{ marginTop: 16 }} size="small" rowKey="party_id" pagination={false}
             columns={[
-              { title: "经销商", dataIndex: "party_id" },
-              { title: "计提基数", dataIndex: "base_amount", render: (v: string) => `¥${v}` },
-              { title: "费率", dataIndex: "rate" },
-              { title: "返利金额", dataIndex: "amount", render: (v: string) => `¥${v}` },
-              { title: "支付单数", dataIndex: "payment_count" },
+              { title: t("reb.dealer"), dataIndex: "party_id" },
+              { title: t("reb.baseAmount"), dataIndex: "base_amount", render: (v: string) => `¥${v}` },
+              { title: t("reb.rate"), dataIndex: "rate" },
+              { title: t("reb.amount"), dataIndex: "amount", render: (v: string) => `¥${v}` },
+              { title: t("reb.paymentCount"), dataIndex: "payment_count" },
             ]}
             dataSource={runResult.results} />
         )}
       </Modal>
 
       {/* 月度对账 */}
-      <Modal title="返利月度对账" open={reconOpen} destroyOnClose onCancel={() => setReconOpen(false)} footer={null}>
+      <Modal title={t("reb.reconTitle")} open={reconOpen} destroyOnClose onCancel={() => setReconOpen(false)} footer={null}>
         <Space style={{ marginBottom: 16 }}>
-          <Input style={{ width: 140 }} value={reconPeriod} onChange={(e) => setReconPeriod(e.target.value)} placeholder="yyyy-MM" />
+          <Input style={{ width: 140 }} value={reconPeriod} onChange={(e) => setReconPeriod(e.target.value)} placeholder={t("reb.periodPlaceholder")} />
           <Button type="primary" loading={reconRunning} icon={<AuditOutlined />} onClick={async () => {
             if (!/^\d{4}-\d{2}$/.test(reconPeriod)) {
-              message.warning("周期格式 yyyy-MM");
+              message.warning(t("reb.periodInvalid"));
               return;
             }
             setReconRunning(true);
@@ -166,26 +167,26 @@ function RebatesTab() {
               const r = await post<{ diff_count: number; diffs: RebateDiffItem[] }>("/rebate-settlements/reconcile", { period: reconPeriod });
               setReconDiffs(r.diffs);
               setReconCount(r.diff_count);
-              message.success(r.diff_count === 0 ? "对账差异为 0 ✓" : `发现 ${r.diff_count} 笔差异`);
+              message.success(r.diff_count === 0 ? t("reb.reconClean") : t("reb.reconDiff", { count: r.diff_count }));
             } finally {
               setReconRunning(false);
             }
-          }}>执行对账</Button>
+          }}>{t("reb.executeRecon")}</Button>
         </Space>
         {reconDiffs.length > 0 ? (
           <Table size="small" rowKey="settlement_id" pagination={false}
             columns={[
-              { title: "结算单", dataIndex: "settlement_id" },
-              { title: "经销商", dataIndex: "party_id" },
-              { title: "存储金额", dataIndex: "stored_amount", render: (v: string) => `¥${v}` },
-              { title: "重算金额", dataIndex: "recomputed_amount", render: (v: string) => (v ? `¥${v}` : "—") },
+              { title: t("reb.settlementCol"), dataIndex: "settlement_id" },
+              { title: t("reb.dealer"), dataIndex: "party_id" },
+              { title: t("reb.storedAmount"), dataIndex: "stored_amount", render: (v: string) => `¥${v}` },
+              { title: t("reb.recomputed"), dataIndex: "recomputed_amount", render: (v: string) => (v ? `¥${v}` : "—") },
             ]}
             dataSource={reconDiffs} />
         ) : (
-          reconCount === 0 && <Typography.Text type="secondary">执行后展示结果（差异为 0 即验收通过）。</Typography.Text>
+          reconCount === 0 && <Typography.Text type="secondary">{t("reb.reconEmpty")}</Typography.Text>
         )}
         <Typography.Paragraph type="secondary" style={{ marginTop: 12 }}>
-          对账口径：存储金额 =（快照基数 × 快照费率）重算 且 当前基数 = 快照基数；不一致计入差异（如退款导致基数变化）。
+          {t("reb.reconHint")}
         </Typography.Paragraph>
       </Modal>
     </>

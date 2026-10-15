@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { App, Button, Form, Input, Modal, Select, Space, Tag, Typography } from "antd";
 import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
 import { get, Perm, post, put } from "@micro/shared";
+import { usePrefs } from "@micro/shared/prefs";
 import type { OpportunityItem } from "@micro/shared/types";
 
 const STAGES = ["NEW", "CONTACTING", "PROPOSAL", "NEGOTIATION", "WON", "LOST"] as const;
@@ -13,6 +14,7 @@ const STAGE_COLOR: Record<string, string> = {
 };
 
 export default function OpportunitiesPage() {
+  const { t } = usePrefs();
   const { message } = App.useApp();
   const [list, setList] = useState<OpportunityItem[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
@@ -30,40 +32,40 @@ export default function OpportunitiesPage() {
   const create = async () => {
     const values = await form.validateFields();
     await post("/opportunities", values);
-    message.success("已创建");
+    message.success(t("common.saved"));
     setCreateOpen(false);
     void load();
   };
 
   const changeStage = async (id: string, stage: string) => {
     await put(`/opportunities/${id}/stage`, { stage });
-    message.success("阶段已推进");
+    message.success(t("opps.stageAdvanced"));
     void load();
   };
 
   return (
     <>
-      <Typography.Title level={4}>商机看板</Typography.Title>
+      <Typography.Title level={4}>{t("opps.title")}</Typography.Title>
       <Space style={{ marginBottom: 16 }}>
         <Perm code="party:opportunity:create">
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => { form.resetFields(); setCreateOpen(true); }}>新建商机</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => { form.resetFields(); setCreateOpen(true); }}>{t("opps.create")}</Button>
         </Perm>
-        <Button icon={<ReloadOutlined />} onClick={() => void load()}>刷新</Button>
+        <Button icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</Button>
       </Space>
       <div style={{ display: "flex", gap: 12, alignItems: "flex-start", overflowX: "auto" }}>
         {STAGES.map((stage) => {
           const items = list.filter((o) => o.stage === stage);
           return (
-            <div key={stage} style={{ flex: "1 1 0", minWidth: 220, background: "#fafafa", borderRadius: 8, padding: 8 }}>
+            <div key={stage} style={{ flex: "1 1 0", minWidth: 220, background: "var(--hover-bg, #fafafa)", borderRadius: 8, padding: 8 }}>
               <Space style={{ marginBottom: 8 }}>
                 <Tag color={STAGE_COLOR[stage]}>{stage}</Tag>
                 <Typography.Text type="secondary">{items.length}</Typography.Text>
               </Space>
               {items.map((o) => (
-                <div key={o.opportunity_id} style={{ background: "#fff", border: "1px solid #f0f0f0", borderRadius: 6, padding: 8, marginBottom: 8 }}>
+                <div key={o.opportunity_id} style={{ background: "var(--card-bg, #fff)", border: "1px solid var(--pref-border, #f0f0f0)", borderRadius: 6, padding: 8, marginBottom: 8 }}>
                   <Typography.Text strong>{o.title}</Typography.Text>
                   <div>
-                    <Typography.Text type="secondary">客户 {o.party_id}</Typography.Text>
+                    <Typography.Text type="secondary">{t("opps.customer", { id: o.party_id })}</Typography.Text>
                   </div>
                   {o.amount && (
                     <div>
@@ -82,18 +84,18 @@ export default function OpportunitiesPage() {
         })}
       </div>
 
-      <Modal title="新建商机" open={createOpen} onOk={() => void create()} onCancel={() => setCreateOpen(false)} destroyOnHidden>
+      <Modal title={t("opps.create")} open={createOpen} onOk={() => void create()} onCancel={() => setCreateOpen(false)} okText={t("common.confirm")} cancelText={t("common.cancel")} destroyOnHidden>
         <Form form={form} layout="vertical">
-          <Form.Item name="party_id" label="客户参与方 ID" rules={[{ required: true }]}>
-            <Input placeholder="参与方 party_id" />
+          <Form.Item name="party_id" label={t("opps.partyId")} rules={[{ required: true, message: t("common.required") }]}>
+            <Input placeholder={t("opps.partyIdPlaceholder")} />
           </Form.Item>
-          <Form.Item name="title" label="商机标题" rules={[{ required: true }]}>
+          <Form.Item name="title" label={t("opps.oppTitle")} rules={[{ required: true, message: t("common.required") }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="amount" label="预估金额(元)">
+          <Form.Item name="amount" label={t("opps.amount")}>
             <Input />
           </Form.Item>
-          <Form.Item name="remark" label="备注">
+          <Form.Item name="remark" label={t("parties.remark")}>
             <Input.TextArea rows={2} />
           </Form.Item>
         </Form>

@@ -6,11 +6,11 @@ import { PlusOutlined } from "@ant-design/icons";
 import type { ActionType, ProColumns } from "@ant-design/pro-components";
 import { ModalForm, ProFormSelect, ProFormText, ProTable } from "@ant-design/pro-components";
 import { del, get, Perm, post, put } from "@micro/shared";
+import { usePrefs } from "@micro/shared/prefs";
 import type { TenantItem } from "@micro/shared/types";
 
-const STATUS = { 1: { text: "正常", color: "green" }, 2: { text: "停用", color: "red" } } as const;
-
 export default function TenantsPage() {
+  const { t } = usePrefs();
   const { message } = App.useApp();
   const actionRef = useRef<ActionType | undefined>(undefined);
   const [editing, setEditing] = useState<TenantItem | "new" | null>(null);
@@ -24,7 +24,7 @@ export default function TenantsPage() {
     } else if (editing) {
       await put(`/tenants/${editing.tenant_id}`, values);
     }
-    message.success("已保存");
+    message.success(t("common.saved"));
     setEditing(null);
     actionRef.current?.reload();
     return true;
@@ -34,51 +34,49 @@ export default function TenantsPage() {
     try {
       JSON.parse(values.quota); // 前端先校验合法性（后端仍强校验）
     } catch {
-      message.error("配额必须是合法 JSON");
+      message.error(t("tenants.quotaInvalid"));
       return false;
     }
     if (quotaEditing) {
       await put(`/tenants/${quotaEditing.tenant_id}/quota`, { quota: values.quota });
     }
-    message.success("配额已更新");
+    message.success(t("tenants.quotaUpdated"));
     setQuotaEditing(null);
     actionRef.current?.reload();
     return true;
   };
 
   const columns: ProColumns<TenantItem>[] = [
-    { title: "租户编码", dataIndex: "keyword", hideInTable: true, fieldProps: { placeholder: "编码/名称搜索" } },
-    { title: "租户编码", dataIndex: "tenant_code", search: false },
-    { title: "名称", dataIndex: "name", search: false },
-    { title: "套餐", dataIndex: "plan", search: false, render: (_, t) => <Tag>{t.plan}</Tag> },
+    { title: t("tenants.code"), dataIndex: "keyword", hideInTable: true, fieldProps: { placeholder: t("tenants.searchPlaceholder") } },
+    { title: t("tenants.code"), dataIndex: "tenant_code", search: false },
+    { title: t("tenants.name"), dataIndex: "name", search: false },
+    { title: t("tenants.plan"), dataIndex: "plan", search: false, render: (_, item) => <Tag>{item.plan}</Tag> },
     {
-      title: "状态",
+      title: t("common.status"),
       dataIndex: "status",
       search: false,
-      render: (_, t) => (
-        <Tag color={STATUS[t.status as keyof typeof STATUS]?.color}>
-          {STATUS[t.status as keyof typeof STATUS]?.text ?? t.status}
-        </Tag>
+      render: (_, item) => (
+        <Tag color={item.status === 1 ? "green" : "red"}>{item.status === 1 ? t("tenants.active") : t("tenants.disabled")}</Tag>
       ),
     },
     {
-      title: "操作",
+      title: t("common.actions"),
       valueType: "option",
-      render: (_, t) => (
+      render: (_, item) => (
         <Space>
           <Perm code="system:tenant:update">
-            <Button size="small" onClick={() => { setEditing(t); form.setFieldsValue(t); }}>编辑</Button>
+            <Button size="small" onClick={() => { setEditing(item); form.setFieldsValue(item); }}>{t("common.edit")}</Button>
           </Perm>
           <Perm code="system:tenant:quota">
-            <Button size="small" onClick={() => { setQuotaEditing(t); quotaForm.setFieldsValue({ quota: t.quota || "{}" }); }}>配额</Button>
+            <Button size="small" onClick={() => { setQuotaEditing(item); quotaForm.setFieldsValue({ quota: item.quota || "{}" }); }}>{t("tenants.quota")}</Button>
           </Perm>
           <Perm code="system:tenant:update">
-            <Popconfirm title="确认删除该租户?" onConfirm={async () => {
-              await del(`/tenants/${t.tenant_id}`);
-              message.success("已删除");
+            <Popconfirm title={t("tenants.deleteConfirm")} onConfirm={async () => {
+              await del(`/tenants/${item.tenant_id}`);
+              message.success(t("common.deleted"));
               actionRef.current?.reload();
             }}>
-              <Button size="small" danger type="link">删除</Button>
+              <Button size="small" danger type="link">{t("common.delete")}</Button>
             </Popconfirm>
           </Perm>
         </Space>
@@ -89,7 +87,7 @@ export default function TenantsPage() {
   return (
     <>
       <ProTable<TenantItem>
-        headerTitle="租户管理"
+        headerTitle={t("tenants.title")}
         rowKey="tenant_id"
         actionRef={actionRef}
         columns={columns}
@@ -102,25 +100,25 @@ export default function TenantsPage() {
         pagination={{ defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 20, 50, 100] }}
         toolBarRender={() => [
           <Perm key="create" code="system:tenant:create">
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing("new"); form.resetFields(); }}>新建租户</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing("new"); form.resetFields(); }}>{t("tenants.create")}</Button>
           </Perm>,
         ]}
       />
       <ModalForm
-        title={editing === "new" ? "新建租户" : "编辑租户"}
+        title={editing === "new" ? t("tenants.create") : t("tenants.editTitle")}
         open={editing !== null}
         onOpenChange={(o) => { if (!o) setEditing(null); }}
         form={form}
         modalProps={{ destroyOnHidden: true }}
         onFinish={submit}
       >
-        <ProFormText name="tenant_code" label="租户编码" disabled={editing !== "new"} rules={[{ required: true, message: "必填" }]} />
-        <ProFormText name="name" label="名称" rules={[{ required: true, message: "必填" }]} />
-        <ProFormSelect name="plan" label="套餐" options={["STANDARD", "PRO", "ENTERPRISE"].map((v) => ({ value: v, label: v }))} />
-        <ProFormSelect name="status" label="状态" options={[{ value: 1, label: "正常" }, { value: 2, label: "停用" }]} />
+        <ProFormText name="tenant_code" label={t("tenants.code")} disabled={editing !== "new"} rules={[{ required: true, message: t("common.required") }]} />
+        <ProFormText name="name" label={t("tenants.name")} rules={[{ required: true, message: t("common.required") }]} />
+        <ProFormSelect name="plan" label={t("tenants.plan")} options={["STANDARD", "PRO", "ENTERPRISE"].map((v) => ({ value: v, label: v }))} />
+        <ProFormSelect name="status" label={t("common.status")} options={[{ value: 1, label: t("tenants.active") }, { value: 2, label: t("tenants.disabled") }]} />
       </ModalForm>
       <ModalForm
-        title={`配额设置（${quotaEditing?.name ?? ""}）`}
+        title={t("tenants.quotaTitle", { name: quotaEditing?.name ?? "" })}
         open={quotaEditing !== null}
         onOpenChange={(o) => { if (!o) setQuotaEditing(null); }}
         form={quotaForm}
@@ -129,8 +127,8 @@ export default function TenantsPage() {
       >
         <Form.Item
           name="quota"
-          label='配额 JSON（如 {"rpm":600,"user_max":100}；空值不限）'
-          rules={[{ required: true, message: "必填" }]}
+          label={t("tenants.quotaLabel")}
+          rules={[{ required: true, message: t("common.required") }]}
         >
           <Input.TextArea rows={4} style={{ fontFamily: "monospace" }} />
         </Form.Item>

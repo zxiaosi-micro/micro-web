@@ -7,20 +7,23 @@ import {
 } from "antd";
 import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
 import { get, Perm, post, put } from "@micro/shared";
+import { getLocale, usePrefs } from "@micro/shared/prefs";
 import type { BomItem, PriceItem, ProductItem, SkuItem, StationProductItem } from "@micro/shared/types";
 
 const PRICE_TYPES = ["RETAIL", "DEALER", "TIER"] as const;
 
 export default function ProductsPage({ defaultTab = "products" }: { defaultTab?: string }) {
+  const { t } = usePrefs();
   return (
     <Tabs defaultActiveKey={defaultTab} items={[
-      { key: "products", label: "商品与价格", children: <ProductsTab /> },
-      { key: "station", label: "场站模板", children: <StationTab /> },
+      { key: "products", label: t("products.tabProducts"), children: <ProductsTab /> },
+      { key: "station", label: t("products.tabStation"), children: <StationTab /> },
     ]} />
   );
 }
 
 function ProductsTab() {
+  const { t } = usePrefs();
   const { message } = App.useApp();
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [skus, setSkus] = useState<SkuItem[]>([]);
@@ -57,29 +60,29 @@ function ProductsTab() {
   };
 
   const skuColumns = useMemo(() => [
-    { title: "编码", dataIndex: "code" },
-    { title: "名称", dataIndex: "name" },
-    { title: "类型", dataIndex: "type", render: (v: string) => <Tag color={v === "EXT_WARRANTY" ? "purple" : "blue"}>{v}</Tag> },
+    { title: t("products.skuCode"), dataIndex: "code" },
+    { title: t("parties.name"), dataIndex: "name" },
+    { title: t("parties.type"), dataIndex: "type", render: (v: string) => <Tag color={v === "EXT_WARRANTY" ? "purple" : "blue"}>{v}</Tag> },
     {
-      title: "操作",
+      title: t("common.actions"),
       render: (_: unknown, r: SkuItem) => (
         <Space>
-          <Button size="small" type="link" onClick={() => void loadPrices(r, false)}>价格</Button>
+          <Button size="small" type="link" onClick={() => void loadPrices(r, false)}>{t("products.priceType")}</Button>
           <Perm code="catalog:price:set">
-            <Button size="small" type="link" onClick={() => { setSelectedSku(r); setPriceOpen(true); }}>设价</Button>
+            <Button size="small" type="link" onClick={() => { setSelectedSku(r); setPriceOpen(true); }}>{t("products.setPrice")}</Button>
           </Perm>
           <Perm code="catalog:warranty:update">
-            <Button size="small" type="link" onClick={() => { setSelectedSku(r); setWarrantyOpen(true); }}>质保</Button>
+            <Button size="small" type="link" onClick={() => { setSelectedSku(r); setWarrantyOpen(true); }}>{t("products.warranty")}</Button>
           </Perm>
         </Space>
       ),
     },
-  ], []);
+  ], [t]);
 
   const submitProduct = async () => {
     const v = await productForm.validateFields();
     await post("/products", v);
-    message.success("已保存");
+    message.success(t("common.saved"));
     setProductOpen(false);
     void load();
   };
@@ -87,7 +90,7 @@ function ProductsTab() {
   const submitSku = async () => {
     const v = await skuForm.validateFields();
     await post("/skus", v);
-    message.success("已保存");
+    message.success(t("common.saved"));
     setSkuOpen(false);
     void load();
   };
@@ -96,7 +99,7 @@ function ProductsTab() {
     if (!selectedSku) return;
     const v = await priceForm.validateFields();
     await post(`/skus/${selectedSku.sku_id}/prices`, v);
-    message.success("价格已落库(新版本)");
+    message.success(t("products.priceSaved"));
     setPriceOpen(false);
     if (selectedSku) void loadPrices(selectedSku, false);
   };
@@ -105,7 +108,7 @@ function ProductsTab() {
     if (!selectedSku) return;
     const v = await warrantyForm.validateFields();
     await put(`/skus/${selectedSku.sku_id}/warranty-policy`, v);
-    message.success("质保策略已保存");
+    message.success(t("products.warrantySaved"));
     setWarrantyOpen(false);
   };
 
@@ -113,72 +116,72 @@ function ProductsTab() {
     <>
       <Space style={{ marginBottom: 16 }}>
         <Perm code="catalog:product:create">
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setProductOpen(true)}>新建商品</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setProductOpen(true)}>{t("products.createProduct")}</Button>
         </Perm>
         <Perm code="catalog:sku:create">
-          <Button icon={<PlusOutlined />} onClick={() => setSkuOpen(true)}>新建 SKU</Button>
+          <Button icon={<PlusOutlined />} onClick={() => setSkuOpen(true)}>{t("products.createSku")}</Button>
         </Perm>
-        <Button icon={<ReloadOutlined />} onClick={() => void load()}>刷新</Button>
+        <Button icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</Button>
       </Space>
       <Table rowKey="product_id" size="small" pagination={false} dataSource={products} style={{ marginBottom: 16 }}
         columns={[
-          { title: "商品", dataIndex: "name" },
-          { title: "分类", dataIndex: "category", render: (v: string) => v || "-" },
-          { title: "状态", dataIndex: "status", render: (v: number) => (v === 1 ? <Tag color="green">上架</Tag> : <Tag>下架</Tag>) },
+          { title: t("products.productOf"), dataIndex: "name" },
+          { title: t("products.category"), dataIndex: "category", render: (v: string) => v || "-" },
+          { title: t("common.status"), dataIndex: "status", render: (v: number) => (v === 1 ? <Tag color="green">{t("products.onShelf")}</Tag> : <Tag>{t("products.offShelf")}</Tag>) },
         ]} />
-      <Typography.Text strong>SKU 列表</Typography.Text>
+      <Typography.Text strong>{t("products.skuList")}</Typography.Text>
       <Table rowKey="sku_id" size="small" pagination={false} dataSource={skus} style={{ marginTop: 8 }} columns={skuColumns} />
       {selectedSku && (
         <div style={{ marginTop: 16 }}>
           <Space>
-            <Typography.Text strong>{`价格 · ${selectedSku.name}`}</Typography.Text>
+            <Typography.Text strong>{t("products.priceOf", { name: selectedSku.name })}</Typography.Text>
             <Select size="small" value={priceHistory ? "history" : "latest"} style={{ width: 140 }}
               onChange={(v) => void loadPrices(selectedSku, v === "history")}
-              options={[{ value: "latest", label: "当前价目表" }, { value: "history", label: "全版本历史" }]} />
+              options={[{ value: "latest", label: t("products.latest") }, { value: "history", label: t("products.history") }]} />
           </Space>
           <Table rowKey="price_id" size="small" pagination={false} style={{ marginTop: 8 }} dataSource={prices}
             columns={[
-              { title: "类型", dataIndex: "price_type" },
-              { title: "阶梯量", dataIndex: "tier_qty" },
-              { title: "价格(元)", dataIndex: "amount" },
-              { title: "版本", dataIndex: "version", render: (v: number) => <Tag>v{v}</Tag> },
-              { title: "时间", dataIndex: "created_at", render: (v: number) => (v ? new Date(v).toLocaleString("zh-CN") : "-") },
+              { title: t("products.priceType"), dataIndex: "price_type" },
+              { title: t("products.tierQty"), dataIndex: "tier_qty" },
+              { title: t("products.price"), dataIndex: "amount" },
+              { title: t("products.version"), dataIndex: "version", render: (v: number) => <Tag>v{v}</Tag> },
+              { title: t("parties.time"), dataIndex: "created_at", render: (v: number) => (v ? new Date(v).toLocaleString(getLocale()) : "-") },
             ]} />
         </div>
       )}
 
-      <Modal title="新建商品" open={productOpen} onOk={() => void submitProduct()} onCancel={() => setProductOpen(false)} destroyOnHidden>
+      <Modal title={t("products.createProduct")} open={productOpen} onOk={() => void submitProduct()} onCancel={() => setProductOpen(false)} okText={t("common.confirm")} cancelText={t("common.cancel")} destroyOnHidden>
         <Form form={productForm} layout="vertical">
-          <Form.Item name="name" label="名称" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="category" label="分类"><Input /></Form.Item>
-          <Form.Item name="remark" label="备注"><Input /></Form.Item>
+          <Form.Item name="name" label={t("parties.name")} rules={[{ required: true, message: t("common.required") }]}><Input /></Form.Item>
+          <Form.Item name="category" label={t("products.category")}><Input /></Form.Item>
+          <Form.Item name="remark" label={t("parties.remark")}><Input /></Form.Item>
         </Form>
       </Modal>
-      <Modal title="新建 SKU" open={skuOpen} onOk={() => void submitSku()} onCancel={() => setSkuOpen(false)} destroyOnHidden>
+      <Modal title={t("products.createSku")} open={skuOpen} onOk={() => void submitSku()} onCancel={() => setSkuOpen(false)} okText={t("common.confirm")} cancelText={t("common.cancel")} destroyOnHidden>
         <Form form={skuForm} layout="vertical">
-          <Form.Item name="product_id" label="商品 ID" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="code" label="SKU 编码" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="name" label="SKU 名称" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="type" label="类型" initialValue="STANDARD">
+          <Form.Item name="product_id" label={t("products.productId")} rules={[{ required: true, message: t("common.required") }]}><Input /></Form.Item>
+          <Form.Item name="code" label={t("products.skuCode")} rules={[{ required: true, message: t("common.required") }]}><Input /></Form.Item>
+          <Form.Item name="name" label={t("products.skuName")} rules={[{ required: true, message: t("common.required") }]}><Input /></Form.Item>
+          <Form.Item name="type" label={t("parties.type")} initialValue="STANDARD">
             <Select options={[{ value: "STANDARD", label: "STANDARD" }, { value: "EXT_WARRANTY", label: "EXT_WARRANTY" }]} />
           </Form.Item>
-          <Form.Item name="spec" label="规格参数(JSON)"><Input.TextArea rows={2} /></Form.Item>
+          <Form.Item name="spec" label={t("products.spec")}><Input.TextArea rows={2} /></Form.Item>
         </Form>
       </Modal>
-      <Modal title={`设置价格 · ${selectedSku?.name ?? ""}`} open={priceOpen} onOk={() => void submitPrice()} onCancel={() => setPriceOpen(false)} destroyOnHidden>
+      <Modal title={t("products.priceTitle", { name: selectedSku?.name ?? "" })} open={priceOpen} onOk={() => void submitPrice()} onCancel={() => setPriceOpen(false)} okText={t("common.confirm")} cancelText={t("common.cancel")} destroyOnHidden>
         <Form form={priceForm} layout="vertical">
-          <Form.Item name="price_type" label="价格类型" rules={[{ required: true }]}>
-            <Select options={PRICE_TYPES.map((t) => ({ value: t, label: t }))} />
+          <Form.Item name="price_type" label={t("products.priceType")} rules={[{ required: true, message: t("common.required") }]}>
+            <Select options={PRICE_TYPES.map((pt) => ({ value: pt, label: pt }))} />
           </Form.Item>
-          <Form.Item name="tier_qty" label="阶梯起量(仅 TIER)"><InputNumber min={0} style={{ width: "100%" }} /></Form.Item>
-          <Form.Item name="amount" label="价格(元)" rules={[{ required: true }]}><Input /></Form.Item>
+          <Form.Item name="tier_qty" label={t("products.tierHint")}><InputNumber min={0} style={{ width: "100%" }} /></Form.Item>
+          <Form.Item name="amount" label={t("products.price")} rules={[{ required: true, message: t("common.required") }]}><Input /></Form.Item>
         </Form>
       </Modal>
-      <Modal title={`质保策略 · ${selectedSku?.name ?? ""}`} open={warrantyOpen} onOk={() => void submitWarranty()} onCancel={() => setWarrantyOpen(false)} destroyOnHidden>
+      <Modal title={t("products.warrantyTitle", { name: selectedSku?.name ?? "" })} open={warrantyOpen} onOk={() => void submitWarranty()} onCancel={() => setWarrantyOpen(false)} okText={t("common.confirm")} cancelText={t("common.cancel")} destroyOnHidden>
         <Form form={warrantyForm} layout="vertical">
-          <Form.Item name="period_months" label="质保期(月)" rules={[{ required: true }]}><InputNumber min={1} style={{ width: "100%" }} /></Form.Item>
-          <Form.Item name="start_rule" label="起算规则" initialValue="ACTIVATION" rules={[{ required: true }]}>
-            <Select options={[{ value: "ACTIVATION", label: "激活日" }, { value: "RECEIPT", label: "签收日" }]} />
+          <Form.Item name="period_months" label={t("products.warrantyMonths")} rules={[{ required: true, message: t("common.required") }]}><InputNumber min={1} style={{ width: "100%" }} /></Form.Item>
+          <Form.Item name="start_rule" label={t("products.startRule")} initialValue="ACTIVATION" rules={[{ required: true, message: t("common.required") }]}>
+            <Select options={[{ value: "ACTIVATION", label: t("products.startActivation") }, { value: "RECEIPT", label: t("products.startReceipt") }]} />
           </Form.Item>
         </Form>
       </Modal>
@@ -187,6 +190,7 @@ function ProductsTab() {
 }
 
 function StationTab() {
+  const { t } = usePrefs();
   const { message } = App.useApp();
   const [list, setList] = useState<StationProductItem[]>([]);
   const [detail, setDetail] = useState<StationProductItem | null>(null);
@@ -218,7 +222,7 @@ function StationTab() {
   const submit = async () => {
     const v = await form.validateFields();
     await post("/station-products", { ...v, items });
-    message.success("已创建");
+    message.success(t("common.saved"));
     setCreateOpen(false);
     setItems([]);
     void load();
@@ -228,55 +232,55 @@ function StationTab() {
     <>
       <Space style={{ marginBottom: 16 }}>
         <Perm code="catalog:station:create">
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>新建场站模板</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>{t("products.createStationTpl")}</Button>
         </Perm>
-        <Button icon={<ReloadOutlined />} onClick={() => void load()}>刷新</Button>
+        <Button icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</Button>
       </Space>
       <Table rowKey="station_product_id" size="small" pagination={false} dataSource={list}
         columns={[
-          { title: "模板名称", dataIndex: "name" },
-          { title: "备注", dataIndex: "remark", render: (v: string) => v || "-" },
+          { title: t("products.tplName"), dataIndex: "name" },
+          { title: t("parties.remark"), dataIndex: "remark", render: (v: string) => v || "-" },
           {
-            title: "操作",
+            title: t("common.actions"),
             render: (_: unknown, r: StationProductItem) => (
-              <Button size="small" type="link" onClick={() => void openDetail(r.station_product_id)}>BOM 明细</Button>
+              <Button size="small" type="link" onClick={() => void openDetail(r.station_product_id)}>{t("products.bomDetail")}</Button>
             ),
           },
         ]} />
       {detail && (
         <div style={{ marginTop: 16 }}>
-          <Typography.Text strong>{`BOM · ${detail.name}`}</Typography.Text>
+          <Typography.Text strong>{t("products.bomOf", { name: detail.name })}</Typography.Text>
           <Table rowKey="sku_id" size="small" pagination={false} style={{ marginTop: 8 }}
             dataSource={(detail.items ?? []) as BomItem[]}
             columns={[
               { title: "SKU", dataIndex: "sku_name" },
               { title: "SKU ID", dataIndex: "sku_id" },
-              { title: "数量", dataIndex: "qty" },
+              { title: t("products.qty"), dataIndex: "qty" },
             ]} />
         </div>
       )}
 
-      <Modal title="新建场站模板" open={createOpen} onOk={() => void submit()} onCancel={() => setCreateOpen(false)} width={640} destroyOnHidden>
+      <Modal title={t("products.createStationTpl")} open={createOpen} onOk={() => void submit()} onCancel={() => setCreateOpen(false)} width={640} okText={t("common.confirm")} cancelText={t("common.cancel")} destroyOnHidden>
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="模板名称" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="remark" label="备注"><Input /></Form.Item>
+          <Form.Item name="name" label={t("products.tplName")} rules={[{ required: true, message: t("common.required") }]}><Input /></Form.Item>
+          <Form.Item name="remark" label={t("parties.remark")}><Input /></Form.Item>
         </Form>
-        <Typography.Text strong>BOM 明细</Typography.Text>
+        <Typography.Text strong>{t("products.bomDetail")}</Typography.Text>
         <Space.Compact style={{ marginTop: 8, width: "100%" }}>
           <Form form={itemForm} layout="inline">
-            <Form.Item name="sku_id" rules={[{ required: true }]}><Input placeholder="SKU ID" /></Form.Item>
-            <Form.Item name="qty" rules={[{ required: true }]}><InputNumber min={1} placeholder="数量" /></Form.Item>
+            <Form.Item name="sku_id" rules={[{ required: true, message: t("common.required") }]}><Input placeholder="SKU ID" /></Form.Item>
+            <Form.Item name="qty" rules={[{ required: true, message: t("common.required") }]}><InputNumber min={1} placeholder={t("products.qty")} /></Form.Item>
           </Form>
-          <Button onClick={() => void addItem()}>添加</Button>
+          <Button onClick={() => void addItem()}>{t("products.add")}</Button>
         </Space.Compact>
         <Table rowKey="sku_id" size="small" pagination={false} style={{ marginTop: 8 }} dataSource={items}
           columns={[
             { title: "SKU ID", dataIndex: "sku_id" },
-            { title: "数量", dataIndex: "qty" },
+            { title: t("products.qty"), dataIndex: "qty" },
             {
-              title: "操作",
+              title: t("common.actions"),
               render: (_: unknown, __: BomItem, i: number) => (
-                <Button size="small" type="link" danger onClick={() => setItems((prev) => prev.filter((_, idx) => idx !== i))}>移除</Button>
+                <Button size="small" type="link" danger onClick={() => setItems((prev) => prev.filter((_, idx) => idx !== i))}>{t("products.remove")}</Button>
               ),
             },
           ]} />

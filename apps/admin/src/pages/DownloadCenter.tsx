@@ -10,23 +10,24 @@ import { DownloadOutlined, PlusOutlined } from "@ant-design/icons";
 import type { ActionType, ProColumns } from "@ant-design/pro-components";
 import { ModalForm, ProFormSelect, ProTable } from "@ant-design/pro-components";
 import { get, Perm, post } from "@micro/shared";
+import { usePrefs } from "@micro/shared/prefs";
 import type { ExportItem } from "@micro/shared/types";
 
-const REPORT_TYPES = [
-  { value: "sales", label: "销售日报" },
-  { value: "inventory", label: "库存日报" },
-  { value: "warranty", label: "质保日报" },
-  { value: "sla", label: "SLA 日报" },
-  { value: "finance", label: "财务日报" },
-  { value: "station", label: "场站日报" },
-  { value: "event_ledger", label: "事件流水（10 万行级）" },
+const REPORT_TYPES: { value: string; labelKey: string }[] = [
+  { value: "sales", labelKey: "dl.rtSales" },
+  { value: "inventory", labelKey: "dl.rtInventory" },
+  { value: "warranty", labelKey: "dl.rtWarranty" },
+  { value: "sla", labelKey: "dl.rtSla" },
+  { value: "finance", labelKey: "dl.rtFinance" },
+  { value: "station", labelKey: "dl.rtStation" },
+  { value: "event_ledger", labelKey: "dl.rtLedger" },
 ];
 
-const STATUS_TAG: Record<string, { color: string; text: string }> = {
-  PENDING: { color: "default", text: "排队中" },
-  RUNNING: { color: "processing", text: "渲染中" },
-  DONE: { color: "success", text: "完成" },
-  FAILED: { color: "error", text: "失败" },
+const STATUS_TAG: Record<string, { color: string; key: string }> = {
+  PENDING: { color: "default", key: "dl.stPending" },
+  RUNNING: { color: "processing", key: "dl.stRunning" },
+  DONE: { color: "success", key: "dl.stDone" },
+  FAILED: { color: "error", key: "dl.stFailed" },
 };
 
 function fmtDate(d: Date): string {
@@ -47,53 +48,54 @@ function saveBase64File(b64: string, fileName: string, contentType: string) {
 }
 
 export default function DownloadCenterPage() {
+  const { t } = usePrefs();
   const { message } = App.useApp();
   const [createOpen, setCreateOpen] = useState(false);
   const [form] = Form.useForm();
   const [downloading, setDownloading] = useState<string>();
   const actionRef = useRef<ActionType | undefined>(undefined);
 
-  const download = async (t: ExportItem) => {
-    setDownloading(t.export_id);
+  const download = async (item: ExportItem) => {
+    setDownloading(item.export_id);
     try {
       const out = await get<{ file_id: string; file_name: string; content_type: string; data: string }>(
-        `/exports/${t.export_id}/download`,
+        `/exports/${item.export_id}/download`,
       );
-      saveBase64File(out.data, out.file_name || t.file_name || "export", out.content_type || "application/octet-stream");
+      saveBase64File(out.data, out.file_name || item.file_name || "export", out.content_type || "application/octet-stream");
     } finally {
       setDownloading(undefined);
     }
   };
 
   const columns: ProColumns<ExportItem>[] = [
-    { title: "任务ID", dataIndex: "export_id", width: 170 },
-    { title: "报表", dataIndex: "report_type", width: 120, render: (_, r) => REPORT_TYPES.find((x) => x.value === r.report_type)?.label ?? r.report_type },
-    { title: "格式", dataIndex: "format", width: 80, render: (_, r) => <Tag>{r.format}</Tag> },
-    { title: "日期范围", width: 200, render: (_, r) => `${r.date_start} ~ ${r.date_end}` },
+    { title: t("dl.taskId"), dataIndex: "export_id", width: 170 },
+    { title: t("dl.report"), dataIndex: "report_type", width: 120, render: (_, r) => { const m = REPORT_TYPES.find((x) => x.value === r.report_type); return m ? t(m.labelKey) : r.report_type; } },
+    { title: t("dl.format"), dataIndex: "format", width: 80, render: (_, r) => <Tag>{r.format}</Tag> },
+    { title: t("dl.dateRange"), width: 200, render: (_, r) => `${r.date_start} ~ ${r.date_end}` },
     {
-      title: "状态",
+      title: t("common.status"),
       dataIndex: "status",
       width: 100,
       render: (_, r) => {
-        const s = STATUS_TAG[r.status] ?? { color: "default", text: r.status };
-        return <Tag color={s.color}>{s.text}</Tag>;
+        const s = STATUS_TAG[r.status];
+        return <Tag color={s?.color ?? "default"}>{s ? t(s.key) : r.status}</Tag>;
       },
     },
-    { title: "行数", dataIndex: "row_count", width: 90 },
-    { title: "耗时", dataIndex: "cost_ms", width: 90, render: (_, r) => (r.cost_ms ? `${r.cost_ms}ms` : "-") },
-    { title: "文件", dataIndex: "file_name", ellipsis: true, render: (_, r) => (r.file_name ? <Tooltip title={r.file_name}>{r.file_name}</Tooltip> : "-") },
+    { title: t("dl.rowCount"), dataIndex: "row_count", width: 90 },
+    { title: t("dl.cost"), dataIndex: "cost_ms", width: 90, render: (_, r) => (r.cost_ms ? `${r.cost_ms}ms` : "-") },
+    { title: t("dl.file"), dataIndex: "file_name", ellipsis: true, render: (_, r) => (r.file_name ? <Tooltip title={r.file_name}>{r.file_name}</Tooltip> : "-") },
     {
-      title: "操作",
+      title: t("common.actions"),
       width: 100,
       valueType: "option",
       render: (_, r) =>
         r.status === "DONE" && r.file_id !== "0" ? [
           <Button key="dl" size="small" type="link" icon={<DownloadOutlined />}
             loading={downloading === r.export_id} onClick={() => void download(r)}>
-            下载
+            {t("dl.download")}
           </Button>,
         ] : r.status === "FAILED" ? [
-          <Tooltip key="err" title={r.error}><Tag color="error">查看原因</Tag></Tooltip>,
+          <Tooltip key="err" title={r.error}><Tag color="error">{t("dl.viewReason")}</Tag></Tooltip>,
         ] : [],
     },
   ];
@@ -101,7 +103,7 @@ export default function DownloadCenterPage() {
   return (
     <>
       <ProTable<ExportItem>
-        headerTitle="下载中心"
+        headerTitle={t("dl.title")}
         rowKey="export_id"
         actionRef={actionRef}
         columns={columns}
@@ -118,39 +120,39 @@ export default function DownloadCenterPage() {
             <Button type="primary" icon={<PlusOutlined />} onClick={() => {
               form.setFieldsValue({ report_type: "sales", format: "CSV", date_start: fmtDate(new Date()), date_end: fmtDate(new Date()) });
               setCreateOpen(true);
-            }}>发起导出</Button>
+            }}>{t("dl.create")}</Button>
           </Perm>,
         ]}
       />
 
       <ModalForm
-        title="发起异步导出"
+        title={t("dl.exportTitle")}
         open={createOpen}
         onOpenChange={(o) => { if (!o) setCreateOpen(false); }}
         form={form}
         modalProps={{ destroyOnHidden: true }}
         onFinish={async (v) => {
           await post("/exports", v);
-          message.success("导出任务已创建（异步渲染，稍后在列表刷新查看）");
+          message.success(t("dl.created"));
           setCreateOpen(false);
           actionRef.current?.reload();
           return true;
         }}
       >
-        <ProFormSelect name="report_type" label="报表类型" options={REPORT_TYPES} rules={[{ required: true }]} />
+        <ProFormSelect name="report_type" label={t("dl.reportType")} options={REPORT_TYPES.map((r) => ({ value: r.value, label: t(r.labelKey) }))} rules={[{ required: true, message: t("common.required") }]} />
         <ProFormSelect
           name="format"
-          label="格式"
-          options={[{ value: "CSV", label: "CSV（任意行数）" }, { value: "XLSX", label: "XLSX（StreamWriter 流式）" }, { value: "PDF", label: "PDF（简单表格，行数封顶）" }]}
-          rules={[{ required: true }]}
+          label={t("dl.format")}
+          options={[{ value: "CSV", label: t("dl.fmtCsv") }, { value: "XLSX", label: t("dl.fmtXlsx") }, { value: "PDF", label: t("dl.fmtPdf") }]}
+          rules={[{ required: true, message: t("common.required") }]}
         />
-        <Form.Item name="date_start" label="开始日" rules={[{ required: true }]}>
+        <Form.Item name="date_start" label={t("dl.dateStart")} rules={[{ required: true, message: t("common.required") }]}>
           <DatePicker allowClear={false} />
         </Form.Item>
-        <Form.Item name="date_end" label="结束日" rules={[{ required: true }]}>
+        <Form.Item name="date_end" label={t("dl.dateEnd")} rules={[{ required: true, message: t("common.required") }]}>
           <DatePicker allowClear={false} />
         </Form.Item>
-        <Form.Item name="note" label="备注" hidden>
+        <Form.Item name="note" label={t("parties.remark")} hidden>
           <Input />
         </Form.Item>
       </ModalForm>

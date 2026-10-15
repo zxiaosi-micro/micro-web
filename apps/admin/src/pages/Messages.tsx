@@ -9,40 +9,43 @@ import { PlusOutlined } from "@ant-design/icons";
 import type { ActionType, ProColumns } from "@ant-design/pro-components";
 import { ModalForm, ProFormSelect, ProFormText, ProTable } from "@ant-design/pro-components";
 import { get, Perm, post } from "@micro/shared";
+import { getLocale, usePrefs } from "@micro/shared/prefs";
 import type { MessageItem, NotifySettingItem, TemplateItem } from "@micro/shared/types";
 
 const PAGED = { defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 20, 50, 100] };
 
 export default function MessagesPage() {
+  const { t } = usePrefs();
   return (
     <Tabs defaultActiveKey="inbox" items={[
-      { key: "inbox", label: "收件箱", children: <InboxTab /> },
-      { key: "templates", label: "模板", children: <TemplatesTab /> },
-      { key: "settings", label: "通知设置", children: <SettingsTab /> },
+      { key: "inbox", label: t("msg.tabInbox"), children: <InboxTab /> },
+      { key: "templates", label: t("msg.tabTemplates"), children: <TemplatesTab /> },
+      { key: "settings", label: t("msg.tabSettings"), children: <SettingsTab /> },
     ]} />
   );
 }
 
 function InboxTab() {
+  const { t } = usePrefs();
   const { message } = App.useApp();
   const [onlyUnread, setOnlyUnread] = useState(false);
   const actionRef = useRef<ActionType | undefined>(undefined);
 
   const columns: ProColumns<MessageItem>[] = [
     {
-      title: "标题",
+      title: t("msg.title"),
       dataIndex: "title",
       render: (_, r) => (r.is_read ? r.title : <Typography.Text strong>{r.title}</Typography.Text>),
     },
-    { title: "内容", dataIndex: "content", ellipsis: true },
-    { title: "来源", dataIndex: "biz_type", render: (_, r) => (r.biz_type ? <Tag>{r.biz_type.replace(/^tpl:/, "")}</Tag> : "-") },
-    { title: "时间", dataIndex: "created_at", render: (_, r) => new Date(r.created_at).toLocaleString("zh-CN") },
+    { title: t("msg.content"), dataIndex: "content", ellipsis: true },
+    { title: t("msg.source"), dataIndex: "biz_type", render: (_, r) => (r.biz_type ? <Tag>{r.biz_type.replace(/^tpl:/, "")}</Tag> : "-") },
+    { title: t("parties.time"), dataIndex: "created_at", render: (_, r) => new Date(r.created_at).toLocaleString(getLocale()) },
     {
-      title: "操作",
+      title: t("common.actions"),
       valueType: "option",
       render: (_, r) => (r.is_read ? [] : [
         <Perm key="read" code="notification:message:read">
-          <Button size="small" type="link" onClick={() => void markRead(r.message_id)}>标记已读</Button>
+          <Button size="small" type="link" onClick={() => void markRead(r.message_id)}>{t("msg.markRead")}</Button>
         </Perm>,
       ]),
     },
@@ -50,13 +53,13 @@ function InboxTab() {
 
   const markRead = async (id: string) => {
     await post(`/messages/${id}/read`, {});
-    message.success("已读");
+    message.success(t("msg.read"));
     actionRef.current?.reload();
   };
 
   return (
     <ProTable<MessageItem>
-      headerTitle="收件箱"
+      headerTitle={t("msg.tabInbox")}
       rowKey="message_id"
       actionRef={actionRef}
       columns={columns}
@@ -75,7 +78,7 @@ function InboxTab() {
           value={onlyUnread ? "unread" : "all"}
           style={{ width: 140 }}
           onChange={(v) => setOnlyUnread(v === "unread")}
-          options={[{ value: "all", label: "全部" }, { value: "unread", label: "仅未读" }]}
+          options={[{ value: "all", label: t("msg.all") }, { value: "unread", label: t("msg.unreadOnly") }]}
         />,
       ]}
     />
@@ -83,22 +86,23 @@ function InboxTab() {
 }
 
 function TemplatesTab() {
+  const { t } = usePrefs();
   const { message } = App.useApp();
   const [createOpen, setCreateOpen] = useState(false);
   const [form] = Form.useForm();
   const actionRef = useRef<ActionType | undefined>(undefined);
 
   const columns: ProColumns<TemplateItem>[] = [
-    { title: "编码", dataIndex: "code" },
-    { title: "标题模板", dataIndex: "title_template" },
-    { title: "渠道", dataIndex: "channel", render: (_, r) => <Tag>{r.channel}</Tag> },
-    { title: "状态", dataIndex: "status", render: (_, r) => (r.status === 1 ? <Tag color="green">启用</Tag> : <Tag>停用</Tag>) },
+    { title: t("msg.code"), dataIndex: "code" },
+    { title: t("msg.titleTemplate"), dataIndex: "title_template" },
+    { title: t("msg.channel"), dataIndex: "channel", render: (_, r) => <Tag>{r.channel}</Tag> },
+    { title: t("common.status"), dataIndex: "status", render: (_, r) => (r.status === 1 ? <Tag color="green">{t("msg.enabled")}</Tag> : <Tag>{t("msg.disabled")}</Tag>) },
   ];
 
   return (
     <>
       <ProTable<TemplateItem>
-        headerTitle="模板"
+        headerTitle={t("msg.tabTemplates")}
         rowKey="template_id"
         actionRef={actionRef}
         columns={columns}
@@ -112,34 +116,34 @@ function TemplatesTab() {
         pagination={PAGED}
         toolBarRender={() => [
           <Perm key="create" code="notification:template:update">
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>新建/更新模板</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>{t("msg.upsert")}</Button>
           </Perm>,
         ]}
       />
       <ModalForm
-        title="新建/更新模板"
+        title={t("msg.upsert")}
         open={createOpen}
         onOpenChange={(o) => { if (!o) setCreateOpen(false); }}
         form={form}
         modalProps={{ destroyOnHidden: true }}
         onFinish={async (v) => {
           await post("/notify-templates", v);
-          message.success("模板已保存(Upsert)");
+          message.success(t("msg.tplSaved"));
           setCreateOpen(false);
           actionRef.current?.reload();
           return true;
         }}
       >
-        <ProFormText name="code" label="模板编码" placeholder="如 order.paid" rules={[{ required: true }]} />
-        <ProFormText name="title_template" label="标题模板" placeholder="支持 {{key}} 占位" rules={[{ required: true }]} />
-        <Form.Item name="content_template" label="内容模板" rules={[{ required: true }]}>
+        <ProFormText name="code" label={t("msg.tplCode")} placeholder={t("msg.tplCodePlaceholder")} rules={[{ required: true, message: t("common.required") }]} />
+        <ProFormText name="title_template" label={t("msg.titleTemplate")} placeholder={t("msg.tplTitlePlaceholder")} rules={[{ required: true, message: t("common.required") }]} />
+        <Form.Item name="content_template" label={t("msg.contentTemplate")} rules={[{ required: true, message: t("common.required") }]}>
           <Input.TextArea rows={3} />
         </Form.Item>
         <ProFormSelect
           name="channel"
-          label="渠道"
+          label={t("msg.channel")}
           initialValue="INBOX"
-          options={[{ value: "INBOX", label: "站内信" }, { value: "SMS", label: "短信(dev 桩)" }]}
+          options={[{ value: "INBOX", label: t("msg.chInbox") }, { value: "SMS", label: t("msg.chSms") }]}
         />
       </ModalForm>
     </>
@@ -147,6 +151,7 @@ function TemplatesTab() {
 }
 
 function SettingsTab() {
+  const { t } = usePrefs();
   const { message } = App.useApp();
   const [editOpen, setEditOpen] = useState(false);
   const [form] = Form.useForm();
@@ -155,7 +160,7 @@ function SettingsTab() {
   return (
     <>
       <ProTable
-        headerTitle="通知设置"
+        headerTitle={t("msg.tabSettings")}
         rowKey="template_code"
         actionRef={actionRef}
         search={false}
@@ -167,38 +172,38 @@ function SettingsTab() {
         }}
         toolBarRender={() => [
           <Perm key="edit" code="notification:setting:update">
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setEditOpen(true)}>设置免打扰/静默</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setEditOpen(true)}>{t("msg.editSetting")}</Button>
           </Perm>,
         ]}
         columns={[
           {
-            title: "模板编码",
+            title: t("msg.tplCode"),
             dataIndex: "template_code",
-            render: (_, r) => (r.template_code === "*" ? <Tag color="blue">全局默认</Tag> : r.template_code),
+            render: (_, r) => (r.template_code === "*" ? <Tag color="blue">{t("msg.globalDefault")}</Tag> : r.template_code),
           },
-          { title: "接收", dataIndex: "enabled", render: (_, r) => (r.enabled ? "是" : <Tag color="red">静默</Tag>) },
-          { title: "免打扰时段", dataIndex: "quiet_hours", render: (_, r) => r.quiet_hours || "-" },
+          { title: t("msg.receiver"), dataIndex: "enabled", render: (_, r) => (r.enabled ? t("msg.yes") : <Tag color="red">{t("msg.silent")}</Tag>) },
+          { title: t("msg.quietHours"), dataIndex: "quiet_hours", render: (_, r) => r.quiet_hours || "-" },
         ]}
       />
       <ModalForm
-        title="通知设置"
+        title={t("msg.settingTitle")}
         open={editOpen}
         onOpenChange={(o) => { if (!o) setEditOpen(false); }}
         form={form}
         modalProps={{ destroyOnHidden: true }}
         onFinish={async (v) => {
           await post("/notify-settings", { ...v, enabled: v.enabled ?? true });
-          message.success("设置已保存");
+          message.success(t("msg.settingSaved"));
           setEditOpen(false);
           actionRef.current?.reload();
           return true;
         }}
       >
-        <ProFormText name="template_code" label="模板编码(*=全局)" initialValue="*" rules={[{ required: true }]} />
-        <Form.Item name="enabled" label="接收通知" initialValue={true} valuePropName="checked">
+        <ProFormText name="template_code" label={t("msg.tplCodeGlobal")} initialValue="*" rules={[{ required: true, message: t("common.required") }]} />
+        <Form.Item name="enabled" label={t("msg.receiveNotify")} initialValue={true} valuePropName="checked">
           <Switch />
         </Form.Item>
-        <ProFormText name="quiet_hours" label="免打扰时段 JSON" placeholder='{"start":"22:00","end":"08:00"}' />
+        <ProFormText name="quiet_hours" label={t("msg.quietHoursJson")} placeholder='{"start":"22:00","end":"08:00"}' />
       </ModalForm>
     </>
   );

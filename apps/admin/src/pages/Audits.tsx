@@ -6,37 +6,40 @@ import { Button, Input, Modal, Tabs, Tag, Typography } from "antd";
 import type { ActionType, ProColumns } from "@ant-design/pro-components";
 import { ProTable } from "@ant-design/pro-components";
 import { get } from "@micro/shared";
+import { getLocale, usePrefs } from "@micro/shared/prefs";
 import type { AuditLogItem, CmdAuditItem } from "@micro/shared/types";
 
 const PAGED = { defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 20, 50, 100] };
 
 export default function AuditsPage({ defaultTab = "logs" }: { defaultTab?: string }) {
+  const { t } = usePrefs();
   return (
     <Tabs defaultActiveKey={defaultTab} items={[
-      { key: "logs", label: "操作审计", children: <LogsTab /> },
-      { key: "cmd", label: "指令审计", children: <CmdTab /> },
+      { key: "logs", label: t("audit.tabLogs"), children: <LogsTab /> },
+      { key: "cmd", label: t("audit.tabCmds"), children: <CmdTab /> },
     ]} />
   );
 }
 
 function LogsTab() {
+  const { t } = usePrefs();
   const [action, setAction] = useState("");
   const [uid, setUid] = useState("");
   const [jsonView, setJsonView] = useState<AuditLogItem | null>(null);
   const actionRef = useRef<ActionType | undefined>(undefined);
 
   const columns: ProColumns<AuditLogItem>[] = [
-    { title: "时间", dataIndex: "created_at", render: (_, r) => new Date(r.created_at).toLocaleString("zh-CN") },
-    { title: "动作", dataIndex: "action", render: (_, r) => <Tag>{r.action}</Tag> },
-    { title: "操作人", dataIndex: "uid" },
-    { title: "目标", render: (_, r) => (r.target_type ? `${r.target_type}:${r.target_id}` : "-") },
-    { title: "结果", dataIndex: "result", render: (_, r) => (r.result === "OK" ? <Tag color="green">OK</Tag> : <Tag color="red">{r.result}</Tag>) },
+    { title: t("inv.time"), dataIndex: "created_at", render: (_, r) => new Date(r.created_at).toLocaleString(getLocale()) },
+    { title: t("audit.action"), dataIndex: "action", render: (_, r) => <Tag>{r.action}</Tag> },
+    { title: t("audit.operator"), dataIndex: "uid" },
+    { title: t("audit.target"), render: (_, r) => (r.target_type ? `${r.target_type}:${r.target_id}` : "-") },
+    { title: t("audit.result"), dataIndex: "result", render: (_, r) => (r.result === "OK" ? <Tag color="green">OK</Tag> : <Tag color="red">{r.result}</Tag>) },
     { title: "trace", dataIndex: "trace_id", ellipsis: true, render: (_, r) => r.trace_id || "-" },
     {
-      title: "快照",
+      title: t("audit.snapshot"),
       valueType: "option",
       render: (_, r) => [
-        <Button key="view" size="small" type="link" onClick={() => setJsonView(r)}>before/after</Button>,
+        <Button key="view" size="small" type="link" onClick={() => setJsonView(r)}>{t("audit.viewDiff")}</Button>,
       ],
     },
   ];
@@ -44,7 +47,7 @@ function LogsTab() {
   return (
     <>
       <ProTable<AuditLogItem>
-        headerTitle="操作审计"
+        headerTitle={t("audit.tabLogs")}
         rowKey="log_id"
         size="small"
         actionRef={actionRef}
@@ -59,18 +62,18 @@ function LogsTab() {
         }}
         pagination={PAGED}
         toolBarRender={() => [
-          <Input.Search key="action" onSearch={(v) => setAction(v)} style={{ width: 200 }} allowClear placeholder="动作(如 auth.login)" />,
-          <Input.Search key="uid" onSearch={(v) => setUid(v)} style={{ width: 160 }} allowClear placeholder="操作人 uid" />,
+          <Input.Search key="action" onSearch={(v) => setAction(v)} style={{ width: 200 }} allowClear placeholder={t("audit.actionPlaceholder")} />,
+          <Input.Search key="uid" onSearch={(v) => setUid(v)} style={{ width: 160 }} allowClear placeholder={t("audit.uidPlaceholder")} />,
         ]}
       />
-      <Modal title="变更快照(追加式禁改删)" open={jsonView !== null} onCancel={() => setJsonView(null)} footer={null} width={640}>
+      <Modal title={t("audit.diffTitle")} open={jsonView !== null} onCancel={() => setJsonView(null)} footer={null} width={640}>
         {jsonView && (
           <>
             <Typography.Paragraph type="secondary">{`log_id=${jsonView.log_id} trace=${jsonView.trace_id || "-"}`}</Typography.Paragraph>
             <Typography.Text strong>before</Typography.Text>
-            <pre style={{ background: "#fafafa", padding: 8, maxHeight: 200, overflow: "auto" }}>{pretty(jsonView.before_json)}</pre>
+            <pre style={{ background: "var(--hover-bg, #fafafa)", padding: 8, maxHeight: 200, overflow: "auto" }}>{pretty(jsonView.before_json)}</pre>
             <Typography.Text strong>after</Typography.Text>
-            <pre style={{ background: "#fafafa", padding: 8, maxHeight: 200, overflow: "auto" }}>{pretty(jsonView.after_json)}</pre>
+            <pre style={{ background: "var(--hover-bg, #fafafa)", padding: 8, maxHeight: 200, overflow: "auto" }}>{pretty(jsonView.after_json)}</pre>
           </>
         )}
       </Modal>
@@ -79,26 +82,27 @@ function LogsTab() {
 }
 
 function CmdTab() {
+  const { t } = usePrefs();
   const [sn, setSn] = useState("");
   const actionRef = useRef<ActionType | undefined>(undefined);
 
   const columns: ProColumns<CmdAuditItem>[] = [
-    { title: "时间", dataIndex: "created_at", render: (_, r) => new Date(r.created_at).toLocaleString("zh-CN") },
-    { title: "指令", dataIndex: "action" },
-    { title: "设备 SN", dataIndex: "sn" },
-    { title: "下发人", dataIndex: "uid" },
+    { title: t("inv.time"), dataIndex: "created_at", render: (_, r) => new Date(r.created_at).toLocaleString(getLocale()) },
+    { title: t("audit.cmd"), dataIndex: "action" },
+    { title: t("audit.deviceSn"), dataIndex: "sn" },
+    { title: t("audit.dispatcher"), dataIndex: "uid" },
     {
-      title: "结果",
+      title: t("audit.result"),
       dataIndex: "result",
       render: (_, r) => (r.result === "FAILED" ? <Tag color="red">{r.result}</Tag> : <Tag color="green">{r.result}</Tag>),
     },
-    { title: "错误", dataIndex: "error", render: (_, r) => r.error || "-" },
+    { title: t("audit.error"), dataIndex: "error", render: (_, r) => r.error || "-" },
     { title: "trace", dataIndex: "trace_id", ellipsis: true, render: (_, r) => r.trace_id || "-" },
   ];
 
   return (
     <ProTable<CmdAuditItem>
-      headerTitle="指令审计"
+      headerTitle={t("audit.tabCmds")}
       rowKey="cmd_audit_id"
       size="small"
       actionRef={actionRef}
@@ -113,7 +117,7 @@ function CmdTab() {
       }}
       pagination={PAGED}
       toolBarRender={() => [
-        <Input.Search key="sn" onSearch={(v) => setSn(v)} style={{ width: 220 }} allowClear placeholder="设备序列号" />,
+        <Input.Search key="sn" onSearch={(v) => setSn(v)} style={{ width: 220 }} allowClear placeholder={t("audit.snPlaceholder")} />,
       ]}
     />
   );

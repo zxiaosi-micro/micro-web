@@ -4,20 +4,13 @@
 import { useState } from "react";
 import { App, Button, Input, Popconfirm, Tag } from "antd";
 import { get, post, Perm, usePolling } from "@micro/shared";
+import { enumLabel, getLocale, usePrefs } from "@micro/shared/prefs";
 import { ProTable } from "@ant-design/pro-components";
 import type { ProColumns } from "@ant-design/pro-components";
 import type { SessionItem } from "@micro/shared/types";
 
-const CLIENT_LABEL: Record<string, string> = {
-  ADMIN_WEB: "管理后台",
-  DEALER_WEB: "经销商",
-  STATION_WEB: "场站",
-  CLIENT_MINI: "客户端小程序",
-  STATION_MINI: "场站小程序",
-  OPS_APP: "运维 App",
-};
-
 export default function SessionsPage() {
+  const { t } = usePrefs();
   const { message } = App.useApp();
   const [uid, setUid] = useState("");
   const { data, refresh, loading } = usePolling(
@@ -27,29 +20,29 @@ export default function SessionsPage() {
 
   const kick = async (sid: string) => {
     const resp = await post<{ kicked: number }>("/sessions/kick", { sid });
-    message.success(`已踢下线 ${resp.kicked} 个会话`);
+    message.success(t("sessions.kicked", { count: resp.kicked }));
     refresh();
   };
 
   const columns: ProColumns<SessionItem>[] = [
     {
-      title: "会话 ID",
+      title: t("sessions.sid"),
       dataIndex: "sid",
       render: (_, s) => <span style={{ fontFamily: "monospace" }}>{s.sid}</span>,
     },
-    { title: "登录端", dataIndex: "client", render: (_, s) => <Tag>{CLIENT_LABEL[s.client] ?? s.client}</Tag> },
+    { title: t("sessions.client"), dataIndex: "client", render: (_, s) => <Tag>{enumLabel("enum.client", s.client)}</Tag> },
     {
-      title: "登录时间",
+      title: t("sessions.loginAt"),
       dataIndex: "created_at",
-      render: (_, s) => (s.created_at ? new Date(Number(s.created_at)).toLocaleString("zh-CN") : "-"),
+      render: (_, s) => (s.created_at ? new Date(Number(s.created_at)).toLocaleString(getLocale()) : "-"),
     },
     {
-      title: "操作",
+      title: t("common.actions"),
       valueType: "option",
       render: (_, s) => (
         <Perm code="system:session:kick">
-          <Popconfirm title="确认踢该会话下线?" onConfirm={() => void kick(s.sid)}>
-            <Button size="small" danger>踢下线</Button>
+          <Popconfirm title={t("sessions.kickConfirm")} onConfirm={() => void kick(s.sid)}>
+            <Button size="small" danger>{t("sessions.kick")}</Button>
           </Popconfirm>
         </Perm>
       ),
@@ -58,7 +51,7 @@ export default function SessionsPage() {
 
   return (
     <ProTable<SessionItem>
-      headerTitle="会话管理"
+      headerTitle={t("sessions.title")}
       rowKey="sid"
       columns={columns}
       dataSource={data?.list ?? []}
@@ -69,7 +62,7 @@ export default function SessionsPage() {
       toolBarRender={() => [
         <Input.Search
           key="uid-search"
-          placeholder="按用户 UID 查询（空=当前用户）"
+          placeholder={t("sessions.uidPlaceholder")}
           allowClear
           onSearch={(v) => setUid(v.trim())}
           style={{ width: 280 }}

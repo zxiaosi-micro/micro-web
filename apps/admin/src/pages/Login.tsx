@@ -5,11 +5,13 @@ import { useEffect, useState } from "react";
 import { Alert, Button, Form, Input } from "antd";
 import { MobileOutlined, SafetyOutlined } from "@ant-design/icons";
 import { login } from "@micro/shared";
-import { brandStyle } from "@micro/shared/theme";
+import { brandStyle, PrefSwitcher } from "@micro/shared/theme";
+import { usePrefs } from "@micro/shared/prefs";
 import { useAuthStore } from "../store/auth";
 import { BRAND } from "../brand";
 
 export default function LoginPage() {
+  const { t } = usePrefs();
   const refresh = useAuthStore((s) => s.refresh);
   const [message, setMessage] = useState<string | null>(null);
   const [lockedSeconds, setLockedSeconds] = useState(0);
@@ -20,8 +22,8 @@ export default function LoginPage() {
     if (lockedSeconds <= 0) {
       return;
     }
-    const t = setInterval(() => setLockedSeconds((s) => Math.max(0, s - 1)), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setLockedSeconds((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(timer);
   }, [lockedSeconds]);
 
   const onFinish = async (values: { mobile: string; password: string }) => {
@@ -35,9 +37,9 @@ export default function LoginPage() {
     }
     if (result.lockedSeconds && result.lockedSeconds > 0) {
       setLockedSeconds(result.lockedSeconds);
-      setMessage(result.message ?? "账号已锁定");
+      setMessage(result.message ?? t("login.accountLocked"));
     } else {
-      setMessage(result.message ?? "登录失败");
+      setMessage(result.message ?? t("login.failed"));
     }
   };
 
@@ -46,29 +48,32 @@ export default function LoginPage() {
       <div className="login-blob b1" />
       <div className="login-blob b2" />
       <div className="login-blob b3" />
+      <div style={{ position: "absolute", top: 16, right: 16, zIndex: 2 }}>
+        <PrefSwitcher />
+      </div>
       <div className="login-card">
         <div className="login-brand">
           <span className="login-brand-icon">
             <SafetyOutlined />
           </span>
-          <span className="login-brand-title">电池全生命周期平台</span>
-          <span className="login-brand-sub">管理后台 · 平台管理员入口</span>
+          <span className="login-brand-title">{t("app.title")}</span>
+          <span className="login-brand-sub">{t("login.subtitle")}</span>
         </div>
         {message && (
           <Alert type="error" showIcon message={message} style={{ marginBottom: 16 }} />
         )}
         <Form onFinish={onFinish} layout="vertical" disabled={lockedSeconds > 0}>
-          <Form.Item name="mobile" rules={[{ required: true, message: "请输入手机号" }]}>
-            <Input size="large" prefix={<MobileOutlined />} placeholder="手机号" maxLength={20} autoComplete="username" />
+          <Form.Item name="mobile" rules={[{ required: true, message: t("login.mobileRequired") }]}>
+            <Input size="large" prefix={<MobileOutlined />} placeholder={t("login.mobile")} maxLength={20} autoComplete="username" />
           </Form.Item>
-          <Form.Item name="password" rules={[{ required: true, message: "请输入密码" }]}>
-            <Input.Password size="large" placeholder="密码" autoComplete="current-password" />
+          <Form.Item name="password" rules={[{ required: true, message: t("login.passwordRequired") }]}>
+            <Input.Password size="large" placeholder={t("login.password")} autoComplete="current-password" />
           </Form.Item>
           <Button className="btn-brand-grad" type="primary" htmlType="submit" block size="large" loading={submitting} disabled={lockedSeconds > 0}>
-            {lockedSeconds > 0 ? `已锁定,${lockedSeconds}s 后重试` : "登录"}
+            {lockedSeconds > 0 ? t("login.lockedRetry", { seconds: lockedSeconds }) : t("common.login")}
           </Button>
         </Form>
-        <p className="login-footnote">连续失败将触发账号锁定保护</p>
+        <p className="login-footnote">{t("login.footnote")}</p>
       </div>
     </div>
   );

@@ -10,30 +10,32 @@ import { PlusOutlined } from "@ant-design/icons";
 import type { ActionType, ProColumns } from "@ant-design/pro-components";
 import { ProTable } from "@ant-design/pro-components";
 import { get, Perm, post } from "@micro/shared";
+import { getLocale, usePrefs } from "@micro/shared/prefs";
 import type { CmdView, DeviceView, DeviceShadowResp, FirmwareView, OtaTaskView } from "@micro/shared/types";
 
-const STATUS_TAG: Record<string, { text: string; color: string }> = {
-  PRODUCED: { text: "已产出", color: "default" },
-  IN_STOCK: { text: "在库", color: "cyan" },
-  OUT: { text: "已出库", color: "geekblue" },
-  ACTIVATED: { text: "已激活", color: "success" },
-  RETIRED: { text: "已退役", color: "orange" },
-  SCRAPPED: { text: "已报废", color: "red" },
+const STATUS_TAG: Record<string, { key: string; color: string }> = {
+  PRODUCED: { key: "dev.stProduced", color: "default" },
+  IN_STOCK: { key: "dev.stInStock", color: "cyan" },
+  OUT: { key: "dev.stOut", color: "geekblue" },
+  ACTIVATED: { key: "dev.stActivated", color: "success" },
+  RETIRED: { key: "dev.stRetired", color: "orange" },
+  SCRAPPED: { key: "dev.stScrapped", color: "red" },
 };
 
-const CMD_STATUS_TAG: Record<string, { text: string; color: string }> = {
-  PENDING: { text: "待下发", color: "default" },
-  SENT: { text: "已下发", color: "blue" },
-  ACKED: { text: "已回执", color: "success" },
-  FAILED: { text: "失败", color: "red" },
+const CMD_STATUS_TAG: Record<string, { key: string; color: string }> = {
+  PENDING: { key: "dev.stPending", color: "default" },
+  SENT: { key: "dev.stSent", color: "blue" },
+  ACKED: { key: "dev.stAcked", color: "success" },
+  FAILED: { key: "dev.stFailed", color: "red" },
 };
 
 export default function DevicesPage(props: { defaultTab?: string }) {
+  const { t } = usePrefs();
   return (
     <Tabs defaultActiveKey={props.defaultTab ?? "devices"} items={[
-      { key: "devices", label: "设备", children: <DevicesTab /> },
-      { key: "cmds", label: "指令记录", children: <CmdsTab /> },
-      { key: "ota", label: "OTA 任务", children: <OtaTab /> },
+      { key: "devices", label: t("dev.tabDevices"), children: <DevicesTab /> },
+      { key: "cmds", label: t("dev.tabCmds"), children: <CmdsTab /> },
+      { key: "ota", label: t("dev.tabOta"), children: <OtaTab /> },
     ]} />
   );
 }
@@ -41,6 +43,7 @@ export default function DevicesPage(props: { defaultTab?: string }) {
 // ---- 设备列表 ----
 
 function DevicesTab() {
+  const { t } = usePrefs();
   const { message } = App.useApp();
   const [keyword, setKeyword] = useState("");
   const [status, setStatus] = useState("");
@@ -66,34 +69,34 @@ function DevicesTab() {
 
   const columns: ProColumns<DeviceView>[] = [
     { title: "SN", dataIndex: "sn", search: false, render: (_, d) => <a onClick={() => void openDetail(d)}>{d.sn}</a> },
-    { title: "产品", dataIndex: "product_key", search: false },
-    { title: "型号", dataIndex: "model", search: false },
-    { title: "状态", dataIndex: "status", search: false, render: (_, d) => <Tag color={STATUS_TAG[d.status]?.color}>{STATUS_TAG[d.status]?.text ?? d.status}</Tag> },
-    { title: "来源订单", dataIndex: "order_no", search: false, render: (_, d) => d.order_no || "—" },
-    { title: "凭证", dataIndex: "has_secret", search: false, render: (_, d) => (d.has_secret ? <Tag color="green">就绪</Tag> : <Tag>无</Tag>) },
+    { title: t("dev.product"), dataIndex: "product_key", search: false },
+    { title: t("dev.model"), dataIndex: "model", search: false },
+    { title: t("common.status"), dataIndex: "status", search: false, render: (_, d) => <Tag color={STATUS_TAG[d.status]?.color}>{STATUS_TAG[d.status] ? t(STATUS_TAG[d.status].key) : d.status}</Tag> },
+    { title: t("dev.sourceOrder"), dataIndex: "order_no", search: false, render: (_, d) => d.order_no || "—" },
+    { title: t("dev.credential"), dataIndex: "has_secret", search: false, render: (_, d) => (d.has_secret ? <Tag color="green">{t("dev.credReady")}</Tag> : <Tag>{t("dev.credNone")}</Tag>) },
     {
-      title: "操作",
+      title: t("common.actions"),
       valueType: "option",
       render: (_, d) => (<Space>
-        <Perm code="asset:device:cmd"><Button size="small" onClick={() => setCmdTarget(d)}>指令</Button></Perm>
+        <Perm code="asset:device:cmd"><Button size="small" onClick={() => setCmdTarget(d)}>{t("dev.cmd")}</Button></Perm>
         <Perm code="asset:device:activate">{d.status === "OUT" && <Button size="small" type="link" onClick={async () => {
           await post(`/devices/${d.device_id}/activate`, {});
-          message.success("已激活（质保起算事件已发）");
+          message.success(t("dev.activated"));
           actionRef.current?.reload();
-        }}>激活</Button>}</Perm>
+        }}>{t("dev.activate")}</Button>}</Perm>
         <Perm code="asset:device:transition">{["ACTIVATED", "RETIRED", "IN_STOCK", "OUT"].includes(d.status) && <Button size="small" type="link" danger onClick={async () => {
           const to = d.status === "ACTIVATED" ? "RETIRED" : "SCRAPPED";
-          await post(`/devices/${d.device_id}/transition`, { to_status: to, reason: "后台人工操作" });
-          message.success(`已迁移至 ${to}`);
+          await post(`/devices/${d.device_id}/transition`, { to_status: to, reason: t("dev.manualReason") });
+          message.success(t("dev.migrated", { status: to }));
           actionRef.current?.reload();
-        }}>{d.status === "ACTIVATED" ? "退役" : "报废"}</Button>}</Perm>
+        }}>{d.status === "ACTIVATED" ? t("dev.retire") : t("dev.scrap")}</Button>}</Perm>
       </Space>),
     },
   ];
 
   return (<>
     <ProTable<DeviceView>
-      headerTitle="设备"
+      headerTitle={t("dev.tabDevices")}
       rowKey="device_id"
       size="small"
       actionRef={actionRef}
@@ -108,41 +111,41 @@ function DevicesTab() {
       }}
       pagination={{ defaultPageSize: 10, showSizeChanger: true }}
       toolBarRender={() => [
-        <Input.Search key="kw" placeholder="SN/型号" allowClear style={{ width: 220 }} onSearch={(v) => setKeyword(v)} />,
-        <Select key="status" allowClear placeholder="状态" style={{ width: 130 }} value={status || undefined}
+        <Input.Search key="kw" placeholder={t("dev.searchPlaceholder")} allowClear style={{ width: 220 }} onSearch={(v) => setKeyword(v)} />,
+        <Select key="status" allowClear placeholder={t("common.status")} style={{ width: 130 }} value={status || undefined}
           onChange={(v) => setStatus(v ?? "")}
-          options={Object.entries(STATUS_TAG).map(([v, t]) => ({ value: v, label: t.text }))} />,
-        <Perm key="import" code="asset:device:create"><Button type="primary" icon={<PlusOutlined />} onClick={() => setImportOpen(true)}>导入 SN</Button></Perm>,
+          options={Object.entries(STATUS_TAG).map(([v, m]) => ({ value: v, label: t(m.key) }))} />,
+        <Perm key="import" code="asset:device:create"><Button type="primary" icon={<PlusOutlined />} onClick={() => setImportOpen(true)}>{t("dev.importSn")}</Button></Perm>,
       ]}
     />
 
     {/* 详情抽屉：影子卡片 + 拓扑 */}
-    <Drawer title={`设备 ${detail?.sn ?? ""}`} width={620} open={!!detail} onClose={() => setDetail(null)}>
+    <Drawer title={t("dev.detailTitle", { sn: detail?.sn ?? "" })} width={620} open={!!detail} onClose={() => setDetail(null)}>
       {detail && (<>
         <Descriptions column={2} size="small" bordered>
           <Descriptions.Item label="SN">{detail.sn}</Descriptions.Item>
-          <Descriptions.Item label="状态"><Tag color={STATUS_TAG[detail.status]?.color}>{STATUS_TAG[detail.status]?.text}</Tag></Descriptions.Item>
-          <Descriptions.Item label="产品">{detail.product_key}</Descriptions.Item>
-          <Descriptions.Item label="型号">{detail.model || "—"}</Descriptions.Item>
-          <Descriptions.Item label="批次">{detail.batch_no || "—"}</Descriptions.Item>
-          <Descriptions.Item label="激活时间">{detail.activated_at ? new Date(detail.activated_at).toLocaleString() : "—"}</Descriptions.Item>
+          <Descriptions.Item label={t("common.status")}><Tag color={STATUS_TAG[detail.status]?.color}>{STATUS_TAG[detail.status] ? t(STATUS_TAG[detail.status].key) : detail.status}</Tag></Descriptions.Item>
+          <Descriptions.Item label={t("dev.product")}>{detail.product_key}</Descriptions.Item>
+          <Descriptions.Item label={t("dev.model")}>{detail.model || "—"}</Descriptions.Item>
+          <Descriptions.Item label={t("dev.batch")}>{detail.batch_no || "—"}</Descriptions.Item>
+          <Descriptions.Item label={t("dev.activatedAt")}>{detail.activated_at ? new Date(detail.activated_at).toLocaleString(getLocale()) : "—"}</Descriptions.Item>
         </Descriptions>
-        <Typography.Title level={5} style={{ marginTop: 16 }}>设备影子</Typography.Title>
+        <Typography.Title level={5} style={{ marginTop: 16 }}>{t("dev.shadow")}</Typography.Title>
         {shadow ? (<Descriptions column={2} size="small" bordered>
           {shadow.metrics.map((m) => (
             <Descriptions.Item key={m.key} label={m.key}>{m.value}</Descriptions.Item>
           ))}
-          <Descriptions.Item label="时间戳" span={2}>{shadow.ts ? new Date(shadow.ts).toLocaleString() : "—"}</Descriptions.Item>
-        </Descriptions>) : <Typography.Text type="secondary">暂无遥测上报</Typography.Text>}
-        <Typography.Title level={5} style={{ marginTop: 16 }}>拓扑（电芯→模组→包→桩）</Typography.Title>
+          <Descriptions.Item label={t("dev.timestamp")} span={2}>{shadow.ts ? new Date(shadow.ts).toLocaleString(getLocale()) : "—"}</Descriptions.Item>
+        </Descriptions>) : <Typography.Text type="secondary">{t("dev.noTelemetry")}</Typography.Text>}
+        <Typography.Title level={5} style={{ marginTop: 16 }}>{t("dev.topology")}</Typography.Title>
         {topology && topology.nodes.length > 0 ? (
           <Steps direction="vertical" size="small" items={topology.nodes.map((n) => ({ title: n.node_type, description: n.node_name || undefined }))} />
-        ) : <Typography.Text type="secondary">未配置拓扑</Typography.Text>}
+        ) : <Typography.Text type="secondary">{t("dev.noTopology")}</Typography.Text>}
         <Perm code="asset:device:credential">
           <Button style={{ marginTop: 16 }} onClick={async () => {
             const out = await post<{ sn: string; secret: string }>(`/devices/${detail.device_id}/credential`, {});
-            Modal.info({ title: `凭证已重建（明文仅此一次）`, content: <Typography.Paragraph copyable>{out.secret}</Typography.Paragraph> });
-          }}>补发凭证</Button>
+            Modal.info({ title: t("dev.credRebuilt"), content: <Typography.Paragraph copyable>{out.secret}</Typography.Paragraph> });
+          }}>{t("dev.reissueCred")}</Button>
         </Perm>
       </>)}
     </Drawer>
@@ -155,26 +158,27 @@ function DevicesTab() {
 }
 
 function CmdModal({ sn, open, onClose }: { sn: string; open: boolean; onClose: () => void }) {
+  const { t } = usePrefs();
   const { message } = App.useApp();
   const [form] = Form.useForm();
   return (
-    <Modal title={`下发指令 → ${sn}`} open={open} onCancel={onClose} onOk={async () => {
+    <Modal title={t("dev.cmdTitle", { sn })} open={open} onCancel={onClose} okText={t("dev.send")} cancelText={t("common.cancel")} okButtonProps={{ danger: true }} onOk={async () => {
       const v = await form.validateFields();
       await post("/devices/commands", { sn, cmd_type: v.cmd_type, params_json: v.params_json || "" });
-      message.success("指令已入队（QoS1 下发，ACK 3s 超时自动重试）");
+      message.success(t("dev.cmdSent"));
       onClose();
-    }} okText="下发" okButtonProps={{ danger: true }}>
+    }}>
       <Form form={form} layout="vertical" initialValues={{ cmd_type: "QUERY" }}>
-        <Form.Item name="cmd_type" label="指令类型" rules={[{ required: true }]}>
+        <Form.Item name="cmd_type" label={t("dev.cmdType")} rules={[{ required: true, message: t("common.required") }]}>
           <Select options={[
-            { value: "QUERY", label: "QUERY 查询" },
-            { value: "REBOOT", label: "REBOOT 重启（控制类）" },
-            { value: "RELAY_SET", label: "RELAY_SET 继电器（控制类）" },
-            { value: "SET_PARAM", label: "SET_PARAM 参数设置" },
-            { value: "PING", label: "PING 探活" },
+            { value: "QUERY", label: t("dev.cmdQuery") },
+            { value: "REBOOT", label: t("dev.cmdReboot") },
+            { value: "RELAY_SET", label: t("dev.cmdRelay") },
+            { value: "SET_PARAM", label: t("dev.cmdParam") },
+            { value: "PING", label: t("dev.cmdPing") },
           ]} />
         </Form.Item>
-        <Form.Item name="params_json" label="参数 JSON（可选）">
+        <Form.Item name="params_json" label={t("dev.cmdParams")}>
           <Input.TextArea rows={3} placeholder='{"key": "value"}' />
         </Form.Item>
       </Form>
@@ -187,27 +191,28 @@ function ImportModal({ open, onClose, onResult, result }: {
   onResult: (r: { sn: string; secret: string }[] | null) => void;
   result: { sn: string; secret: string }[] | null;
 }) {
+  const { t } = usePrefs();
   const { message } = App.useApp();
   const [form] = Form.useForm();
   return (
-    <Modal title="批量导入 SN（自动开通 EMQX 凭证）" open={open} onCancel={() => { onClose(); onResult(null); }}
+    <Modal title={t("dev.importTitle")} open={open} onCancel={() => { onClose(); onResult(null); }}
       footer={null} width={640}>
       <Form form={form} layout="vertical" onFinish={async (v) => {
         const items = String(v.sns).split("\n").map((s: string) => s.trim()).filter(Boolean).map((sn: string) => ({ sn, product_key: v.product_key }));
         const out = await post<{ imported: number; secrets: { sn: string; secret: string }[]; provision_errors: string[] }>("/devices/import", { items, provision: true });
-        message.success(`导入 ${out.imported} 台${out.provision_errors.length ? `（${out.provision_errors.length} 条告警）` : ""}`);
+        message.success(t("dev.imported", { count: out.imported, warnings: out.provision_errors.length }));
         onResult(out.secrets);
       }}>
-        <Form.Item name="product_key" label="产品标识" rules={[{ required: true }]} initialValue="ESS-DEMO">
+        <Form.Item name="product_key" label={t("dev.productKey")} rules={[{ required: true, message: t("common.required") }]} initialValue="ESS-DEMO">
           <Input />
         </Form.Item>
-        <Form.Item name="sns" label="SN 清单（每行一个）" rules={[{ required: true }]}>
+        <Form.Item name="sns" label={t("dev.snList")} rules={[{ required: true, message: t("common.required") }]}>
           <Input.TextArea rows={6} placeholder={"SN-0001\nSN-0002"} />
         </Form.Item>
-        <Button type="primary" htmlType="submit">导入</Button>
+        <Button type="primary" htmlType="submit">{t("dev.import")}</Button>
       </Form>
       {result && (<>
-        <Typography.Title level={5} style={{ marginTop: 16 }}>密钥 CSV（产线明文仅此一次）</Typography.Title>
+        <Typography.Title level={5} style={{ marginTop: 16 }}>{t("dev.secretCsv")}</Typography.Title>
         <Input.TextArea rows={6} readOnly value={result.map((r) => `${r.sn},${r.secret}`).join("\n")} />
       </>)}
     </Modal>
@@ -217,23 +222,24 @@ function ImportModal({ open, onClose, onResult, result }: {
 // ---- 指令记录 ----
 
 function CmdsTab() {
+  const { t } = usePrefs();
   const [sn, setSn] = useState("");
   const [status, setStatus] = useState("");
   const actionRef = useRef<ActionType | undefined>(undefined);
 
   const columns: ProColumns<CmdView>[] = [
-    { title: "指令 ID", dataIndex: "cmd_id" },
+    { title: t("dev.cmdId"), dataIndex: "cmd_id" },
     { title: "SN", dataIndex: "sn" },
-    { title: "类型", dataIndex: "cmd_type" },
-    { title: "状态", dataIndex: "status", render: (_, r) => <Tag color={CMD_STATUS_TAG[r.status]?.color}>{CMD_STATUS_TAG[r.status]?.text ?? r.status}</Tag> },
-    { title: "重试", dataIndex: "retry_count" },
-    { title: "失败原因", dataIndex: "fail_reason", ellipsis: true, render: (_, r) => r.fail_reason || "—" },
-    { title: "下发时间", dataIndex: "created_at", render: (_, r) => new Date(r.created_at).toLocaleString() },
+    { title: t("audit.cmd"), dataIndex: "cmd_type" },
+    { title: t("common.status"), dataIndex: "status", render: (_, r) => <Tag color={CMD_STATUS_TAG[r.status]?.color}>{CMD_STATUS_TAG[r.status] ? t(CMD_STATUS_TAG[r.status].key) : r.status}</Tag> },
+    { title: t("dev.retry"), dataIndex: "retry_count" },
+    { title: t("dev.failReason"), dataIndex: "fail_reason", ellipsis: true, render: (_, r) => r.fail_reason || "—" },
+    { title: t("dev.sentAt"), dataIndex: "created_at", render: (_, r) => new Date(r.created_at).toLocaleString(getLocale()) },
   ];
 
   return (
     <ProTable<CmdView>
-      headerTitle="指令记录"
+      headerTitle={t("dev.tabCmds")}
       rowKey="cmd_id"
       size="small"
       actionRef={actionRef}
@@ -249,8 +255,8 @@ function CmdsTab() {
       pagination={{ defaultPageSize: 10, showSizeChanger: true }}
       toolBarRender={() => [
         <Input.Search key="sn" placeholder="SN" allowClear style={{ width: 200 }} onSearch={(v) => setSn(v)} />,
-        <Select key="status" allowClear placeholder="状态" style={{ width: 130 }} value={status || undefined} onChange={(v) => setStatus(v ?? "")}
-          options={Object.entries(CMD_STATUS_TAG).map(([v, t]) => ({ value: v, label: t.text }))} />,
+        <Select key="status" allowClear placeholder={t("common.status")} style={{ width: 130 }} value={status || undefined} onChange={(v) => setStatus(v ?? "")}
+          options={Object.entries(CMD_STATUS_TAG).map(([v, m]) => ({ value: v, label: t(m.key) }))} />,
       ]}
     />
   );
@@ -258,16 +264,17 @@ function CmdsTab() {
 
 // ---- OTA 任务 ----
 
-const OTA_STATUS: Record<string, { text: string; color: string }> = {
-  CREATED: { text: "已创建", color: "default" },
-  RUNNING: { text: "进行中", color: "blue" },
-  PAUSED: { text: "已暂停", color: "orange" },
-  DONE: { text: "完成", color: "success" },
-  CANCELLED: { text: "已取消", color: "default" },
-  ROLLED_BACK: { text: "已回滚", color: "red" },
+const OTA_STATUS: Record<string, { key: string; color: string }> = {
+  CREATED: { key: "dev.otaStCreated", color: "default" },
+  RUNNING: { key: "dev.otaStRunning", color: "blue" },
+  PAUSED: { key: "dev.otaStPaused", color: "orange" },
+  DONE: { key: "dev.otaStDone", color: "success" },
+  CANCELLED: { key: "dev.otaStCancelled", color: "default" },
+  ROLLED_BACK: { key: "dev.otaStRolledBack", color: "red" },
 };
 
 function OtaTab() {
+  const { t } = usePrefs();
   const { message } = App.useApp();
   const [status, setStatus] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
@@ -276,26 +283,26 @@ function OtaTab() {
 
   const columns: ProColumns<OtaTaskView>[] = [
     {
-      title: "任务号",
+      title: t("dev.otaTaskNo"),
       dataIndex: "task_no",
-      render: (_, t) => <a onClick={async () => setDetail(await get<OtaTaskView>(`/ota-tasks/${t.task_id}`))}>{t.task_no}</a>,
+      render: (_, task) => <a onClick={async () => setDetail(await get<OtaTaskView>(`/ota-tasks/${task.task_id}`))}>{task.task_no}</a>,
     },
-    { title: "名称", dataIndex: "name" },
-    { title: "产品", dataIndex: "product_key" },
-    { title: "状态", dataIndex: "status", render: (_, t) => <Tag color={OTA_STATUS[t.status]?.color}>{OTA_STATUS[t.status]?.text ?? t.status}</Tag> },
-    { title: "进度", render: (_, t) => `${t.success_count}/${t.total}（失败 ${t.fail_count}）` },
-    { title: "失败率阈值", dataIndex: "fail_threshold_pct", render: (_, t) => `${t.fail_threshold_pct}%` },
-    { title: "暂停原因", dataIndex: "fail_reason", ellipsis: true, render: (_, t) => t.fail_reason || "—" },
+    { title: t("parties.name"), dataIndex: "name" },
+    { title: t("dev.product"), dataIndex: "product_key" },
+    { title: t("common.status"), dataIndex: "status", render: (_, task) => <Tag color={OTA_STATUS[task.status]?.color}>{OTA_STATUS[task.status] ? t(OTA_STATUS[task.status].key) : task.status}</Tag> },
+    { title: t("dev.progress"), render: (_, task) => t("dev.progressDetail", { success: task.success_count, total: task.total, failed: task.fail_count }) },
+    { title: t("dev.failThreshold"), dataIndex: "fail_threshold_pct", render: (_, task) => `${task.fail_threshold_pct}%` },
+    { title: t("dev.pauseReason"), dataIndex: "fail_reason", ellipsis: true, render: (_, task) => task.fail_reason || "—" },
     {
-      title: "操作",
+      title: t("common.actions"),
       valueType: "option",
-      render: (_, t) => (
+      render: (_, task) => (
         <Perm code="asset:ota:rollback">
-          {["RUNNING", "PAUSED", "DONE"].includes(t.status) && <Button size="small" danger onClick={async () => {
-            await post(`/ota-tasks/${t.task_id}/rollback`, { reason: "后台人工回滚" });
-            message.success("已回滚（明细复位，旧固件重推）");
+          {["RUNNING", "PAUSED", "DONE"].includes(task.status) && <Button size="small" danger onClick={async () => {
+            await post(`/ota-tasks/${task.task_id}/rollback`, { reason: t("dev.manualReason") });
+            message.success(t("dev.rolledBack"));
             actionRef.current?.reload();
-          }}>回滚</Button>}
+          }}>{t("dev.rollback")}</Button>}
         </Perm>
       ),
     },
@@ -303,7 +310,7 @@ function OtaTab() {
 
   return (<>
     <ProTable<OtaTaskView>
-      headerTitle="OTA 任务"
+      headerTitle={t("dev.tabOta")}
       rowKey="task_id"
       size="small"
       actionRef={actionRef}
@@ -318,28 +325,28 @@ function OtaTab() {
       }}
       pagination={{ defaultPageSize: 10, showSizeChanger: true }}
       toolBarRender={() => [
-        <Select key="status" allowClear placeholder="状态" style={{ width: 130 }} value={status || undefined} onChange={(v) => setStatus(v ?? "")}
-          options={Object.entries(OTA_STATUS).map(([v, t]) => ({ value: v, label: t.text }))} />,
-        <Perm key="create" code="asset:ota:task"><Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>创建 OTA 任务</Button></Perm>,
+        <Select key="status" allowClear placeholder={t("common.status")} style={{ width: 130 }} value={status || undefined} onChange={(v) => setStatus(v ?? "")}
+          options={Object.entries(OTA_STATUS).map(([v, m]) => ({ value: v, label: t(m.key) }))} />,
+        <Perm key="create" code="asset:ota:task"><Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>{t("dev.createOta")}</Button></Perm>,
       ]}
     />
 
     <OtaCreateModal open={createOpen} onClose={() => { setCreateOpen(false); actionRef.current?.reload(); }} />
 
-    <Drawer title={`OTA 任务 ${detail?.task_no ?? ""}`} width={720} open={!!detail} onClose={() => setDetail(null)}>
+    <Drawer title={t("dev.otaDetailTitle", { no: detail?.task_no ?? "" })} width={720} open={!!detail} onClose={() => setDetail(null)}>
       {detail && (<>
         <Descriptions column={2} size="small" bordered>
-          <Descriptions.Item label="状态"><Tag color={OTA_STATUS[detail.status]?.color}>{OTA_STATUS[detail.status]?.text}</Tag></Descriptions.Item>
-          <Descriptions.Item label="目标固件">{detail.firmware_id}</Descriptions.Item>
-          <Descriptions.Item label="批次大小">{detail.batch_size}</Descriptions.Item>
-          <Descriptions.Item label="回滚固件">{detail.rollback_firmware_id || "—"}</Descriptions.Item>
+          <Descriptions.Item label={t("common.status")}><Tag color={OTA_STATUS[detail.status]?.color}>{OTA_STATUS[detail.status] ? t(OTA_STATUS[detail.status].key) : detail.status}</Tag></Descriptions.Item>
+          <Descriptions.Item label={t("dev.targetFirmware")}>{detail.firmware_id}</Descriptions.Item>
+          <Descriptions.Item label={t("dev.batchSize")}>{detail.batch_size}</Descriptions.Item>
+          <Descriptions.Item label={t("dev.rollbackFirmware")}>{detail.rollback_firmware_id || "—"}</Descriptions.Item>
         </Descriptions>
         <Table style={{ marginTop: 12 }} rowKey="id" size="small" pagination={false} dataSource={detail.devices}
           columns={[
             { title: "SN", dataIndex: "sn" },
-            { title: "状态", dataIndex: "status", render: (v: string) => <Tag>{v}</Tag> },
-            { title: "重试", dataIndex: "retry_count" },
-            { title: "错误", dataIndex: "error", ellipsis: true, render: (v: string) => v || "—" },
+            { title: t("common.status"), dataIndex: "status", render: (v: string) => <Tag>{v}</Tag> },
+            { title: t("dev.retry"), dataIndex: "retry_count" },
+            { title: t("audit.error"), dataIndex: "error", ellipsis: true, render: (v: string) => v || "—" },
           ]} />
       </>)}
     </Drawer>
@@ -347,6 +354,7 @@ function OtaTab() {
 }
 
 function OtaCreateModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = usePrefs();
   const { message } = App.useApp();
   const [form] = Form.useForm();
   const [fws, setFws] = useState<FirmwareView[]>([]);
@@ -355,7 +363,8 @@ function OtaCreateModal({ open, onClose }: { open: boolean; onClose: () => void 
     setFws(out.list);
   };
   return (
-    <Modal title="创建 OTA 任务（灰度分批）" open={open} onCancel={onClose} afterOpenChange={(o) => o && openFetch()}
+    <Modal title={t("dev.otaCreateTitle")} open={open} onCancel={onClose} afterOpenChange={(o) => o && openFetch()}
+      okText={t("dev.create")} cancelText={t("common.cancel")}
       onOk={async () => {
         const v = await form.validateFields();
         await post("/ota-tasks", {
@@ -364,20 +373,20 @@ function OtaCreateModal({ open, onClose }: { open: boolean; onClose: () => void 
           batch_size: Number(v.batch_size) || 50,
           device_ids: String(v.device_ids || "").split(",").map((s: string) => s.trim()).filter(Boolean),
         });
-        message.success("任务已创建（扫描器将按批次下发）");
+        message.success(t("dev.otaCreated"));
         onClose();
-      }} okText="创建">
+      }}>
       <Form form={form} layout="vertical">
-        <Form.Item name="name" label="任务名称" rules={[{ required: true }]}><Input /></Form.Item>
-        <Form.Item name="product_key" label="目标产品" rules={[{ required: true }]} initialValue="ESS-DEMO"><Input /></Form.Item>
-        <Form.Item name="firmware_id" label="目标固件" rules={[{ required: true }]}>
+        <Form.Item name="name" label={t("dev.taskName")} rules={[{ required: true, message: t("common.required") }]}><Input /></Form.Item>
+        <Form.Item name="product_key" label={t("dev.targetProduct")} rules={[{ required: true, message: t("common.required") }]} initialValue="ESS-DEMO"><Input /></Form.Item>
+        <Form.Item name="firmware_id" label={t("dev.targetFirmware")} rules={[{ required: true, message: t("common.required") }]}>
           <Select options={fws.map((f) => ({ value: f.firmware_id, label: `${f.product_key} v${f.version} (${f.firmware_id})` }))} />
         </Form.Item>
-        <Form.Item name="rollback_firmware_id" label="回滚固件（可选）">
+        <Form.Item name="rollback_firmware_id" label={t("dev.rollbackFwOptional")}>
           <Select allowClear options={fws.map((f) => ({ value: f.firmware_id, label: `${f.product_key} v${f.version}` }))} />
         </Form.Item>
-        <Form.Item name="batch_size" label="批次大小" initialValue={50}><Input /></Form.Item>
-        <Form.Item name="device_ids" label="灰度设备 ID（逗号分隔；空=全量 ACTIVATED）">
+        <Form.Item name="batch_size" label={t("dev.batchSize")} initialValue={50}><Input /></Form.Item>
+        <Form.Item name="device_ids" label={t("dev.grayDeviceIds")}>
           <Input.TextArea rows={2} />
         </Form.Item>
       </Form>

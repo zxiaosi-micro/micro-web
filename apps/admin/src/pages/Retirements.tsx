@@ -11,28 +11,30 @@ import { PlusOutlined } from "@ant-design/icons";
 import type { ActionType, ProColumns } from "@ant-design/pro-components";
 import { ProTable } from "@ant-design/pro-components";
 import { get, Perm, post } from "@micro/shared";
+import { getLocale, usePrefs } from "@micro/shared/prefs";
 import type { RecycleItem, RetirementItem } from "@micro/shared/types";
 
-const GRADE_META: Record<string, { text: string; color: string }> = {
-  A: { text: "A · 二次销售", color: "green" },
-  B: { text: "B · 降容备电", color: "orange" },
-  C: { text: "C · 报废回收", color: "red" },
+const GRADE_META: Record<string, { key: string; color: string }> = {
+  A: { key: "ret.gradeA", color: "green" },
+  B: { key: "ret.gradeB", color: "orange" },
+  C: { key: "ret.gradeC", color: "red" },
 };
 
-const DISPOSITION_META: Record<string, string> = {
-  PENDING: "待检测",
-  RESALE: "已二次销售",
-  DERATE: "降容备电",
-  RECYCLED: "已回收",
+const DISPOSITION_KEY: Record<string, string> = {
+  PENDING: "ret.dispPending",
+  RESALE: "ret.dispResale",
+  DERATE: "ret.dispDerate",
+  RECYCLED: "ret.dispRecycled",
 };
 
 const PAGED = { defaultPageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 20, 50, 100] };
 
 export default function RetirementsPage() {
+  const { t } = usePrefs();
   return (
     <Tabs defaultActiveKey="assessments" items={[
-      { key: "assessments", label: "退役评估", children: <AssessmentsTab /> },
-      { key: "recycles", label: "回收单", children: <RecyclesTab /> },
+      { key: "assessments", label: t("ret.tabAssessments"), children: <AssessmentsTab /> },
+      { key: "recycles", label: t("ret.tabRecycles"), children: <RecyclesTab /> },
     ]} />
   );
 }
@@ -40,6 +42,7 @@ export default function RetirementsPage() {
 // ---- 退役评估 ----
 
 function AssessmentsTab() {
+  const { t } = usePrefs();
   const { message } = App.useApp();
   const [keyword, setKeyword] = useState("");
   const [grade, setGrade] = useState("");
@@ -53,28 +56,28 @@ function AssessmentsTab() {
   const actionRef = useRef<ActionType | undefined>(undefined);
 
   const columns: ProColumns<RetirementItem>[] = [
-    { title: "评估单号", dataIndex: "assessment_no" },
+    { title: t("ret.assessmentNo"), dataIndex: "assessment_no" },
     { title: "SN", dataIndex: "sn" },
-    { title: "轮次", dataIndex: "round", width: 64 },
-    { title: "SOH%", dataIndex: "soh", render: (_, r) => (r.soh ? `${r.soh}` : "—") },
-    { title: "循环数", dataIndex: "cycle_count" },
-    { title: "评级", dataIndex: "grade", render: (_, r) => (r.grade ? <Tag color={GRADE_META[r.grade]?.color}>{GRADE_META[r.grade]?.text ?? r.grade}</Tag> : <Tag>待检测</Tag>) },
-    { title: "处置", dataIndex: "disposition", render: (_, r) => DISPOSITION_META[r.disposition] ?? r.disposition },
-    { title: "检测工单", dataIndex: "inspection_ticket_no", render: (_, r) => r.inspection_ticket_no || "—" },
-    { title: "发起时间", dataIndex: "created_at", render: (_, r) => new Date(r.created_at).toLocaleString() },
+    { title: t("ret.round"), dataIndex: "round", width: 64 },
+    { title: t("ret.soh"), dataIndex: "soh", render: (_, r) => (r.soh ? `${r.soh}` : "—") },
+    { title: t("ret.cycles"), dataIndex: "cycle_count" },
+    { title: t("ret.grade"), dataIndex: "grade", render: (_, r) => (r.grade ? <Tag color={GRADE_META[r.grade]?.color}>{GRADE_META[r.grade] ? t(GRADE_META[r.grade].key) : r.grade}</Tag> : <Tag>{t("ret.dispPending")}</Tag>) },
+    { title: t("ret.disposition"), dataIndex: "disposition", render: (_, r) => (DISPOSITION_KEY[r.disposition] ? t(DISPOSITION_KEY[r.disposition]) : r.disposition) },
+    { title: t("ret.inspectionTicket"), dataIndex: "inspection_ticket_no", render: (_, r) => r.inspection_ticket_no || "—" },
+    { title: t("inv.createdAt"), dataIndex: "created_at", render: (_, r) => new Date(r.created_at).toLocaleString(getLocale()) },
     {
-      title: "操作",
+      title: t("common.actions"),
       valueType: "option",
       render: (_, r) => (
         <Space>
           {r.disposition === "PENDING" && !r.grade && (
             <Perm code="asset:device:retire">
-              <Button size="small" type="primary" onClick={() => { submitForm.resetFields(); setSubmitTarget(r); }}>检测结果录入</Button>
+              <Button size="small" type="primary" onClick={() => { submitForm.resetFields(); setSubmitTarget(r); }}>{t("ret.inputResult")}</Button>
             </Perm>
           )}
           {r.grade && r.disposition === "PENDING" && (
             <Perm code="asset:device:retire">
-              <Button size="small" danger={r.grade === "C"} onClick={() => { decideForm.resetFields(); setDecideTarget(r); }}>评级处置</Button>
+              <Button size="small" danger={r.grade === "C"} onClick={() => { decideForm.resetFields(); setDecideTarget(r); }}>{t("ret.decide")}</Button>
             </Perm>
           )}
         </Space>
@@ -85,7 +88,7 @@ function AssessmentsTab() {
   return (
     <>
       <ProTable<RetirementItem>
-        headerTitle="退役评估"
+        headerTitle={t("ret.tabAssessments")}
         rowKey="assessment_id"
         actionRef={actionRef}
         columns={columns}
@@ -99,42 +102,42 @@ function AssessmentsTab() {
         }}
         pagination={PAGED}
         toolBarRender={() => [
-          <Input.Search key="kw" onSearch={(v) => setKeyword(v)} style={{ width: 220 }} allowClear placeholder="评估单号/SN" />,
+          <Input.Search key="kw" onSearch={(v) => setKeyword(v)} style={{ width: 220 }} allowClear placeholder={t("ret.searchPlaceholder")} />,
           <Select key="grade" value={grade || "all"} style={{ width: 150 }} onChange={(v) => setGrade(v === "all" ? "" : v)}
-            options={[{ value: "all", label: "全部评级" }, ...Object.entries(GRADE_META).map(([k, t]) => ({ value: k, label: t.text }))]} />,
+            options={[{ value: "all", label: t("ret.allGrades") }, ...Object.entries(GRADE_META).map(([k, m]) => ({ value: k, label: t(m.key) }))]} />,
           <Select key="disp" value={disposition || "all"} style={{ width: 140 }} onChange={(v) => setDisposition(v === "all" ? "" : v)}
-            options={[{ value: "all", label: "全部处置" }, ...Object.entries(DISPOSITION_META).map(([k, t]) => ({ value: k, label: t }))]} />,
+            options={[{ value: "all", label: t("ret.allDispositions") }, ...Object.entries(DISPOSITION_KEY).map(([k, key]) => ({ value: k, label: t(key) }))]} />,
           <Perm key="create" code="asset:device:retire">
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => { createForm.resetFields(); setCreateOpen(true); }}>发起评估</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => { createForm.resetFields(); setCreateOpen(true); }}>{t("ret.startAssessment")}</Button>
           </Perm>,
         ]}
       />
 
       {/* 发起评估 */}
-      <Modal title="发起退役评估" open={createOpen} destroyOnClose onCancel={() => setCreateOpen(false)}
+      <Modal title={t("ret.createTitle")} open={createOpen} destroyOnClose okText={t("common.confirm")} cancelText={t("common.cancel")} onCancel={() => setCreateOpen(false)}
         onOk={async () => {
           const v = await createForm.validateFields();
           const out = await post<{ assessment_no: string }>(`/devices/${v.device_id}/retirement`, {
             inspection_ticket_no: v.inspection_ticket_no ?? "", remark: v.remark ?? "",
           });
-          message.success(`评估单 ${out.assessment_no} 已发起（复用 ops 检测工单）`);
+          message.success(t("ret.created", { no: out.assessment_no }));
           setCreateOpen(false);
           actionRef.current?.reload();
         }}>
-        <Typography.Paragraph type="secondary">设备须处于 ACTIVATED/RETIRED；同一设备同时仅一笔未完结评估。检测数据经 ops 检测工单执行后回填。</Typography.Paragraph>
+        <Typography.Paragraph type="secondary">{t("ret.createHint")}</Typography.Paragraph>
         <Form form={createForm} layout="vertical">
-          <Form.Item name="device_id" label="设备 ID" rules={[{ required: true, message: "请输入设备 ID" }]}>
-            <Input placeholder="设备 ID（设备管理页复制）" />
+          <Form.Item name="device_id" label={t("ret.deviceId")} rules={[{ required: true, message: t("ret.deviceIdRequired") }]}>
+            <Input placeholder={t("ret.deviceIdPlaceholder")} />
           </Form.Item>
-          <Form.Item name="inspection_ticket_no" label="检测工单号（ops，可空）">
+          <Form.Item name="inspection_ticket_no" label={t("ret.ticketOptional")}>
             <Input placeholder="TK..." />
           </Form.Item>
-          <Form.Item name="remark" label="备注"><Input /></Form.Item>
+          <Form.Item name="remark" label={t("parties.remark")}><Input /></Form.Item>
         </Form>
       </Modal>
 
       {/* 检测结果录入（录入即评级） */}
-      <Modal title={`检测结果录入 — ${submitTarget?.assessment_no ?? ""}`} open={!!submitTarget} destroyOnClose
+      <Modal title={t("ret.resultTitle", { no: submitTarget?.assessment_no ?? "" })} open={!!submitTarget} destroyOnClose okText={t("common.confirm")} cancelText={t("common.cancel")}
         onCancel={() => setSubmitTarget(null)}
         onOk={async () => {
           const v = await submitForm.validateFields();
@@ -145,41 +148,41 @@ function AssessmentsTab() {
             safety_items: (v.safety_items ?? []).map((s: { item: string; pass: boolean }) => ({ item: s.item, pass: !!s.pass })),
             source: v.source || "MANUAL",
           });
-          message.success(`评级 ${out.grade}：${out.reason}`);
+          message.success(t("ret.graded", { grade: out.grade, reason: out.reason }));
           setSubmitTarget(null);
           actionRef.current?.reload();
         }}>
         <Form form={submitForm} layout="vertical" initialValues={{ consistency_ok: true, source: "MANUAL" }}>
           <Space size="middle">
-            <Form.Item name="soh" label="SOH %" rules={[{ required: true, message: "请输入 SOH" }]}>
+            <Form.Item name="soh" label={t("ret.soh")} rules={[{ required: true, message: t("ret.sohRequired") }]}>
               <InputNumber min={0} max={100} style={{ width: 120 }} />
             </Form.Item>
-            <Form.Item name="cycle_count" label="循环数" rules={[{ required: true, message: "请输入循环数" }]}>
+            <Form.Item name="cycle_count" label={t("ret.cycles")} rules={[{ required: true, message: t("ret.cyclesRequired") }]}>
               <InputNumber min={0} style={{ width: 120 }} />
             </Form.Item>
-            <Form.Item name="resistance_mohm" label="内阻 mΩ">
+            <Form.Item name="resistance_mohm" label={t("ret.resistance")}>
               <InputNumber min={0} style={{ width: 120 }} />
             </Form.Item>
           </Space>
-          <Form.Item name="consistency_ok" label="一致性达标（压差/温差阈值内）" valuePropName="checked">
+          <Form.Item name="consistency_ok" label={t("ret.consistency")} valuePropName="checked">
             <Switch />
           </Form.Item>
-          <Form.Item name="source" label="检测来源">
+          <Form.Item name="source" label={t("ret.source")}>
             <Select style={{ width: 160 }} options={[
-              { value: "MANUAL", label: "人工（MANUAL）" },
-              { value: "TELEMETRY", label: "遥测（TELEMETRY）" },
-              { value: "BENCH", label: "台架（BENCH）" },
+              { value: "MANUAL", label: t("ret.srcManual") },
+              { value: "TELEMETRY", label: t("ret.srcTelemetry") },
+              { value: "BENCH", label: t("ret.srcBench") },
             ]} />
           </Form.Item>
           <Typography.Paragraph type="secondary">
-            安全检测项：任一不过直接评 C（过充/短路/绝缘/热失控等；无项视为通过）。本表单简化为逐项录入，可留空。
+            {t("ret.safetyHint")}
           </Typography.Paragraph>
         </Form>
       </Modal>
 
       {/* 评级处置 */}
-      <Modal title={`评级处置 — ${decideTarget?.assessment_no ?? ""}（${decideTarget?.grade ?? ""} 级）`} open={!!decideTarget}
-        destroyOnClose onCancel={() => setDecideTarget(null)}
+      <Modal title={t("ret.decideTitle", { no: decideTarget?.assessment_no ?? "", grade: decideTarget?.grade ?? "" })} open={!!decideTarget}
+        destroyOnClose okText={t("common.confirm")} cancelText={t("common.cancel")} onCancel={() => setDecideTarget(null)}
         onOk={async () => {
           const v = await decideForm.validateFields();
           const out = await post<{ grade: string; disposition: string; recycle_no?: string; trace_code?: string; device_status: string }>(
@@ -190,33 +193,33 @@ function AssessmentsTab() {
             });
           message.success(
             out.recycle_no
-              ? `已报废走回收单 ${out.recycle_no}（溯源码 ${out.trace_code}），设备 ${out.device_status}`
-              : `处置完成：${out.disposition}，设备 ${out.device_status}`);
+              ? t("ret.recycled", { no: out.recycle_no, trace: out.trace_code ?? "", status: out.device_status })
+              : t("ret.decided", { disposition: out.disposition, status: out.device_status }));
           setDecideTarget(null);
           actionRef.current?.reload();
         }}>
         <Form form={decideForm} layout="vertical"
           initialValues={{ target: decideTarget?.grade === "A" ? "RESALE" : decideTarget?.grade === "B" ? "DERATE" : "RECYCLE" }}>
-          <Form.Item name="target" label="处置分支" rules={[{ required: true }]}>
+          <Form.Item name="target" label={t("ret.target")} rules={[{ required: true, message: t("common.required") }]}>
             <Select options={[
-              { value: "RESALE", label: "二次销售（A：RETIRED→IN_STOCK，新单新质保）" },
-              { value: "DERATE", label: "降容备电（B：不给销售质保）" },
-              { value: "RECYCLE", label: "报废回收（C：生成回收单+溯源码）" },
+              { value: "RESALE", label: t("ret.targetResale") },
+              { value: "DERATE", label: t("ret.targetDerate") },
+              { value: "RECYCLE", label: t("ret.targetRecycle") },
             ]} />
           </Form.Item>
           <Form.Item noStyle shouldUpdate={(a, b) => a.target !== b.target}>
             {({ getFieldValue }) => getFieldValue("target") === "RECYCLE" ? (
               <>
-                <Form.Item name="recycler_party_id" label="回收商参与方 ID（RECYCLER 类型）">
-                  <Input placeholder="party ID（参与方管理）" />
+                <Form.Item name="recycler_party_id" label={t("ret.recyclerId")}>
+                  <Input placeholder={t("ret.recyclerPlaceholder")} />
                 </Form.Item>
-                <Form.Item name="residual_value" label="残值 ¥">
+                <Form.Item name="residual_value" label={t("ret.residualValue")}>
                   <InputNumber min={0} style={{ width: 160 }} />
                 </Form.Item>
               </>
             ) : null}
           </Form.Item>
-          <Form.Item name="remark" label="备注"><Input /></Form.Item>
+          <Form.Item name="remark" label={t("parties.remark")}><Input /></Form.Item>
         </Form>
       </Modal>
     </>
@@ -226,24 +229,25 @@ function AssessmentsTab() {
 // ---- 回收单 ----
 
 function RecyclesTab() {
+  const { t } = usePrefs();
   const [keyword, setKeyword] = useState("");
   const [status, setStatus] = useState("");
   const actionRef = useRef<ActionType | undefined>(undefined);
 
   const columns: ProColumns<RecycleItem>[] = [
-    { title: "回收单号", dataIndex: "recycle_no" },
+    { title: t("ret.recycleNo"), dataIndex: "recycle_no" },
     { title: "SN", dataIndex: "sn" },
-    { title: "监管溯源码", dataIndex: "trace_code", render: (_, r) => <Typography.Text code>{r.trace_code}</Typography.Text> },
-    { title: "回收商", dataIndex: "recycler_party_id", render: (_, r) => r.recycler_party_id || "—" },
-    { title: "残值", dataIndex: "residual_value", render: (_, r) => `¥${r.residual_value}` },
-    { title: "凭证", dataIndex: "evidence_file_id", render: (_, r) => (r.evidence_file_id ? "已归档" : "—") },
-    { title: "状态", dataIndex: "status" },
-    { title: "创建时间", dataIndex: "created_at", render: (_, r) => new Date(r.created_at).toLocaleString() },
+    { title: t("ret.traceCode"), dataIndex: "trace_code", render: (_, r) => <Typography.Text code>{r.trace_code}</Typography.Text> },
+    { title: t("ret.recycler"), dataIndex: "recycler_party_id", render: (_, r) => r.recycler_party_id || "—" },
+    { title: t("ret.residualValue"), dataIndex: "residual_value", render: (_, r) => `¥${r.residual_value}` },
+    { title: t("ret.evidence"), dataIndex: "evidence_file_id", render: (_, r) => (r.evidence_file_id ? t("ret.archived") : "—") },
+    { title: t("common.status"), dataIndex: "status" },
+    { title: t("inv.createdAt"), dataIndex: "created_at", render: (_, r) => new Date(r.created_at).toLocaleString(getLocale()) },
   ];
 
   return (
     <ProTable<RecycleItem>
-      headerTitle="回收单"
+      headerTitle={t("ret.tabRecycles")}
       rowKey="recycle_id"
       actionRef={actionRef}
       columns={columns}
@@ -257,13 +261,13 @@ function RecyclesTab() {
       }}
       pagination={PAGED}
       toolBarRender={() => [
-        <Input.Search key="kw" onSearch={(v) => setKeyword(v)} style={{ width: 260 }} allowClear placeholder="回收单号/SN/溯源码" />,
+        <Input.Search key="kw" onSearch={(v) => setKeyword(v)} style={{ width: 260 }} allowClear placeholder={t("ret.recycleSearchPlaceholder")} />,
         <Select key="status" value={status || "all"} style={{ width: 140 }} onChange={(v) => setStatus(v === "all" ? "" : v)}
           options={[
-            { value: "all", label: "全部状态" },
-            { value: "CREATED", label: "已建单" },
-            { value: "TRANSFERRED", label: "已移交" },
-            { value: "SETTLED", label: "已结算" },
+            { value: "all", label: t("ret.allStatus") },
+            { value: "CREATED", label: t("ret.stCreated") },
+            { value: "TRANSFERRED", label: t("ret.stTransferred") },
+            { value: "SETTLED", label: t("ret.stSettled") },
           ]} />,
       ]}
     />

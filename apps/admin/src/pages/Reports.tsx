@@ -7,66 +7,67 @@ import {
 } from "antd";
 import { FileDoneOutlined, ReloadOutlined, SyncOutlined } from "@ant-design/icons";
 import { get, Perm, post } from "@micro/shared";
+import { getLocale, usePrefs } from "@micro/shared/prefs";
 import type {
   MetricDictItem, ReportOverviewItem, ReportRow,
 } from "@micro/shared/types";
 
-// 六大报表列配置（列 key = 指标字典 metric_code，口径在字典 Tooltip）。
-const REPORTS: { type: string; label: string; dim?: string; cols: { key: string; title: string; money?: boolean }[] }[] = [
+// 六大报表列配置（列 key = 指标字典 metric_code，口径在字典 Tooltip；label/titleKey 渲染期翻译）。
+const REPORTS: { type: string; labelKey: string; dim?: string; cols: { key: string; titleKey: string; money?: boolean }[] }[] = [
   {
-    type: "sales", label: "销售",
+    type: "sales", labelKey: "rep.sales",
     cols: [
-      { key: "orders_created", title: "新增订单" },
-      { key: "orders_paid", title: "支付完成" },
-      { key: "orders_cancelled", title: "取消" },
-      { key: "orders_pay_timeout", title: "支付超时" },
-      { key: "returns_approved", title: "退货通过" },
-      { key: "shipments_signed", title: "签收" },
-      { key: "devices_shipped", title: "签收设备" },
-      { key: "gmv_paid", title: "实付GMV", money: true },
+      { key: "orders_created", titleKey: "rep.ordersCreated" },
+      { key: "orders_paid", titleKey: "rep.ordersPaid" },
+      { key: "orders_cancelled", titleKey: "rep.ordersCancelled" },
+      { key: "orders_pay_timeout", titleKey: "rep.ordersPayTimeout" },
+      { key: "returns_approved", titleKey: "rep.returnsApproved" },
+      { key: "shipments_signed", titleKey: "rep.shipmentsSigned" },
+      { key: "devices_shipped", titleKey: "rep.devicesShipped" },
+      { key: "gmv_paid", titleKey: "rep.gmvPaid", money: true },
     ],
   },
   {
-    type: "inventory", label: "库存", dim: "warehouse_id",
+    type: "inventory", labelKey: "rep.inventory", dim: "warehouse_id",
     cols: [
-      { key: "stock_in_qty", title: "入库数量" },
-      { key: "stock_out_qty", title: "出库数量" },
-      { key: "low_stock_events", title: "低库存触发" },
+      { key: "stock_in_qty", titleKey: "rep.stockInQty" },
+      { key: "stock_out_qty", titleKey: "rep.stockOutQty" },
+      { key: "low_stock_events", titleKey: "rep.lowStockEvents" },
     ],
   },
   {
-    type: "warranty", label: "质保",
+    type: "warranty", labelKey: "rep.warranty",
     cols: [
-      { key: "warranties_started", title: "质保起算" },
-      { key: "warranties_device", title: "设备质保" },
-      { key: "warranties_station", title: "场站质保" },
-      { key: "devices_activated", title: "设备激活" },
+      { key: "warranties_started", titleKey: "rep.warrantiesStarted" },
+      { key: "warranties_device", titleKey: "rep.warrantiesDevice" },
+      { key: "warranties_station", titleKey: "rep.warrantiesStation" },
+      { key: "devices_activated", titleKey: "rep.devicesActivated" },
     ],
   },
   {
-    type: "sla", label: "SLA", dim: "station_id",
+    type: "sla", labelKey: "rep.sla", dim: "station_id",
     cols: [
-      { key: "alerts_total", title: "告警数" },
-      { key: "alerts_p1", title: "P1" },
-      { key: "alerts_p2", title: "P2" },
-      { key: "alerts_p3", title: "P3" },
+      { key: "alerts_total", titleKey: "rep.alertsTotal" },
+      { key: "alerts_p1", titleKey: "rep.p1" },
+      { key: "alerts_p2", titleKey: "rep.p2" },
+      { key: "alerts_p3", titleKey: "rep.p3" },
     ],
   },
   {
-    type: "finance", label: "财务", dim: "channel",
+    type: "finance", labelKey: "rep.finance", dim: "channel",
     cols: [
-      { key: "payments_count", title: "支付笔数" },
-      { key: "paid_amount", title: "实付金额", money: true },
-      { key: "refunds_count", title: "退款笔数" },
-      { key: "refund_amount", title: "退款金额", money: true },
+      { key: "payments_count", titleKey: "rep.paymentsCount" },
+      { key: "paid_amount", titleKey: "rep.paidAmount", money: true },
+      { key: "refunds_count", titleKey: "rep.refundsCount" },
+      { key: "refund_amount", titleKey: "rep.refundAmount", money: true },
     ],
   },
   {
-    type: "station", label: "场站", dim: "station_id",
+    type: "station", labelKey: "rep.station", dim: "station_id",
     cols: [
-      { key: "stations_created", title: "新建场站" },
-      { key: "station_alerts", title: "场站告警" },
-      { key: "alerts_p1", title: "P1 告警" },
+      { key: "stations_created", titleKey: "rep.stationsCreated" },
+      { key: "station_alerts", titleKey: "rep.stationAlerts" },
+      { key: "alerts_p1", titleKey: "rep.p1Alert" },
     ],
   },
 ];
@@ -76,6 +77,7 @@ function fmtDate(d: Date): string {
 }
 
 export default function ReportsPage() {
+  const { t } = usePrefs();
   const { message } = App.useApp();
   const [date, setDate] = useState(fmtDate(new Date()));
   const [overview, setOverview] = useState<ReportOverviewItem[]>();
@@ -98,13 +100,13 @@ export default function ReportsPage() {
   const runRecon = async () => {
     const out = await post<{ diff_total: number }>("/reports/recon", { recon_date: date });
     message[out.diff_total > 0 ? "warning" : "success"](
-      out.diff_total > 0 ? `对账发现 ${out.diff_total} 处差异（差异站内信已发，修复走补投递）` : "对账完成：差异率 0",
+      out.diff_total > 0 ? t("rep.reconDiff", { count: out.diff_total }) : t("rep.reconClean"),
     );
   };
 
   const rebuild = async () => {
     const out = await post<{ rebuild_version: string }>("/reports/rebuild", {});
-    message.info(`读模型已重建（版本 v${out.rebuild_version}）——重启 analytics 后新消费组从头回放；保留期外历史用 p4backfill 补`);
+    message.info(t("rep.rebuilt", { version: out.rebuild_version }));
   };
 
   return (
@@ -115,16 +117,18 @@ export default function ReportsPage() {
           onChange={(v) => { const d = v ?? fmtDate(new Date()); setDate(d); load(d); }}
           allowClear={false}
         />
-        <Button icon={<ReloadOutlined />} onClick={() => load(date)} loading={loading}>刷新</Button>
+        <Button icon={<ReloadOutlined />} onClick={() => load(date)} loading={loading}>{t("common.refresh")}</Button>
         <Perm code="analytics:recon:run">
-          <Button icon={<SyncOutlined />} onClick={() => void runRecon()}>手动对账</Button>
+          <Button icon={<SyncOutlined />} onClick={() => void runRecon()}>{t("rep.recon")}</Button>
         </Perm>
         <Perm code="analytics:recon:rebuild">
           <Popconfirm
-            title="清空台账与六大日表并递增消费组版本号，重启后从头回放。确认重建？"
+            title={t("rep.rebuildConfirm")}
+            okText={t("common.confirm")}
+            cancelText={t("common.cancel")}
             onConfirm={() => void rebuild()}
           >
-            <Button icon={<FileDoneOutlined />} danger>读模型重建</Button>
+            <Button icon={<FileDoneOutlined />} danger>{t("rep.rebuild")}</Button>
           </Popconfirm>
         </Perm>
       </Space>
@@ -147,7 +151,7 @@ export default function ReportsPage() {
 
       <Tabs items={REPORTS.map((r) => ({
         key: r.type,
-        label: r.label,
+        label: t(r.labelKey),
         children: <ReportTable reportType={r.type} date={date} cols={r.cols} dim={r.dim} dictOf={dictOf} />,
       }))} />
     </>
@@ -157,10 +161,11 @@ export default function ReportsPage() {
 function ReportTable(props: {
   reportType: string;
   date: string;
-  cols: { key: string; title: string; money?: boolean }[];
+  cols: { key: string; titleKey: string; money?: boolean }[];
   dim?: string;
   dictOf: (code: string) => MetricDictItem | undefined;
 }) {
+  const { t } = usePrefs();
   const [rows, setRows] = useState<ReportRow[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -174,28 +179,28 @@ function ReportTable(props: {
   }, [props.reportType, props.date]);
 
   const columns: Record<string, unknown>[] = [
-    { title: "业务日", dataIndex: "stat_date", width: 110 },
+    { title: t("rep.statDate"), dataIndex: "stat_date", width: 110 },
   ];
-  if (props.dim === "warehouse_id") columns.push({ title: "仓库ID", dataIndex: "warehouse_id", width: 120 });
-  if (props.dim === "station_id") columns.push({ title: "场站ID", dataIndex: "station_id", width: 160 });
-  if (props.dim === "channel") columns.push({ title: "渠道", dataIndex: "channel", width: 100, render: (v: string) => (v ? <Tag>{v}</Tag> : "-") });
+  if (props.dim === "warehouse_id") columns.push({ title: t("rep.warehouseId"), dataIndex: "warehouse_id", width: 120 });
+  if (props.dim === "station_id") columns.push({ title: t("rep.stationId"), dataIndex: "station_id", width: 160 });
+  if (props.dim === "channel") columns.push({ title: t("rep.channel"), dataIndex: "channel", width: 100, render: (v: string) => (v ? <Tag>{v}</Tag> : "-") });
   for (const c of props.cols) {
     columns.push({
       title: (
         <span title={props.dictOf(c.key)?.caliber ?? c.key}>
-          {c.title}
-          {props.dictOf(c.key)?.recon === false && <Tag style={{ marginLeft: 4 }}>不对账</Tag>}
+          {t(c.titleKey)}
+          {props.dictOf(c.key)?.recon === false && <Tag style={{ marginLeft: 4 }}>{t("rep.noRecon")}</Tag>}
         </span>
       ),
       key: c.key,
-      render: (_: unknown, r: ReportRow) => (c.money ? Number(r.metrics?.[c.key] ?? 0).toLocaleString("zh-CN", { minimumFractionDigits: 2 }) : r.metrics?.[c.key] ?? "0"),
+      render: (_: unknown, r: ReportRow) => (c.money ? Number(r.metrics?.[c.key] ?? 0).toLocaleString(getLocale(), { minimumFractionDigits: 2 }) : r.metrics?.[c.key] ?? "0"),
     });
   }
 
   return (
     <>
       {rows.length === 0 && !loading && (
-        <Alert type="info" showIcon message="该日无数据（读模型按事件构建；对账/backfill 可补）" style={{ marginBottom: 8 }} />
+        <Alert type="info" showIcon message={t("rep.noData")} style={{ marginBottom: 8 }} />
       )}
       <Table
         rowKey={(r) => `${r.stat_date}-${r.station_id ?? 0}-${r.warehouse_id ?? 0}-${r.channel ?? ""}`}
